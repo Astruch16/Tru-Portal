@@ -5,8 +5,9 @@ import { buildBrandedInvoicePDF, type InvoiceRow } from '@/lib/pdf/invoice';
 
 export const runtime = 'nodejs';
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const raw = params.id ?? '';
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id: rawId } = await params;
+  const raw = rawId ?? '';
   const id = raw.replace(/[<>"'\s]/g, '');
   if (!/^[0-9a-f-]{36}$/i.test(id)) return new Response(`Bad invoice id: "${raw}"`, { status: 400 });
 

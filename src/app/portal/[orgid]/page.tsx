@@ -1,6 +1,8 @@
 // src/app/portal/[orgid]/page.tsx
 export const dynamic = 'force-dynamic';
 
+import PortalClient from '@/components/portal/PortalClient';
+
 // ----- Types -----
 type KPI = {
   org_id: string;
@@ -24,11 +26,12 @@ type Invoice = {
 
 type Plan = { tier: 'launch' | 'elevate' | 'maximize'; percent: number };
 
+type Property = {
+  id: string;
+  name: string;
+};
+
 // ----- Helpers -----
-function money(cents?: number | null) {
-  const v = ((cents ?? 0) / 100).toFixed(2);
-  return `$${v} CAD`;
-}
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
 }
@@ -64,17 +67,23 @@ function isPlan(v: unknown): v is Plan {
   const okTier = t === 'launch' || t === 'elevate' || t === 'maximize';
   return okTier && typeof v.percent === 'number';
 }
+function isProperty(v: unknown): v is Property {
+  if (!isRecord(v)) return false;
+  return typeof v.id === 'string' && typeof v.name === 'string';
+}
 
 // ----- Page (Server Component) -----
 export default async function PortalPage({
   params,
   searchParams,
 }: {
-  params: { orgid: string };
-  searchParams?: { month?: string };
+  params: Promise<{ orgid: string }>;
+  searchParams?: Promise<{ month?: string }>;
 }) {
-  const orgId = params.orgid;
-  const ym = (searchParams?.month ?? new Date().toISOString().slice(0, 7)).slice(0, 7);
+  const { orgid } = await params;
+  const search = await searchParams;
+  const orgId = orgid;
+  const ym = (search?.month ?? new Date().toISOString().slice(0, 7)).slice(0, 7);
   const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
   // Plan
@@ -111,92 +120,17 @@ export default async function PortalPage({
     invoices = invList.filter(isInvoice);
   } catch { invoices = []; }
 
-  return (
-    <div style={{ maxWidth: 980, margin: '40px auto', padding: '0 16px', fontFamily: 'ui-sans-serif, system-ui' }}>
-      <h1 style={{ fontSize: 28, marginBottom: 8 }}>Member Portal</h1>
-      <p style={{ color: '#555', marginBottom: 8 }}>
-        Org: <code>{orgId}</code> — Month: <strong>{ym}</strong>
-      </p>
-      {plan && (
-        <p style={{ color: '#111827', marginBottom: 24 }}>
-          Plan: <strong style={{ textTransform: 'capitalize' }}>{plan.tier}</strong> ({plan.percent}%)
-        </p>
-      )}
+  // Properties
+  const propRes = await fetch(`${base}/api/orgs/${orgId}/properties/list`, { cache: 'no-store' });
+  let properties: Property[] = [];
+  try {
+    const propJson = await propRes.json();
+    let propList: unknown[] = [];
+    if (isRecord(propJson) && Array.isArray((propJson as { properties?: unknown[] }).properties)) {
+      propList = (propJson as { properties?: unknown[] }).properties as unknown[];
+    }
+    properties = propList.filter(isProperty);
+  } catch { properties = []; }
 
-      {/* KPI cards */}
-      {k ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12, marginBottom: 28 }}>
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 12, color: '#6b7280' }}>Gross Revenue</div>
-            <div style={{ fontSize: 20, fontWeight: 600 }}>{money(k.gross_revenue_cents)}</div>
-          </div>
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 12, color: '#6b7280' }}>Expenses</div>
-            <div style={{ fontSize: 20, fontWeight: 600 }}>{money(k.expenses_cents)}</div>
-          </div>
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 12, color: '#6b7280' }}>Net Revenue</div>
-            <div style={{ fontSize: 20, fontWeight: 600 }}>{money(k.net_revenue_cents)}</div>
-          </div>
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 12, color: '#6b7280' }}>Nights Booked</div>
-            <div style={{ fontSize: 20, fontWeight: 600 }}>{k.nights_booked}</div>
-          </div>
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 12, color: '#6b7280' }}>Occupancy</div>
-            <div style={{ fontSize: 20, fontWeight: 600 }}>{(k.occupancy_rate * 100).toFixed(1)}%</div>
-          </div>
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 12, color: '#6b7280' }}>Vacancy</div>
-            <div style={{ fontSize: 20, fontWeight: 600 }}>{(k.vacancy_rate * 100).toFixed(1)}%</div>
-          </div>
-        </div>
-      ) : (
-        <p style={{ color: '#9ca3af' }}>No KPI data.</p>
-      )}
-
-      {/* Invoices */}
-      <h2 style={{ fontSize: 22, margin: '8px 0 12px' }}>Invoices</h2>
-      <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead style={{ background: '#f9fafb' }}>
-            <tr>
-              <th style={{ textAlign: 'left', padding: 12, borderBottom: '1px solid #e5e7eb' }}>Invoice #</th>
-              <th style={{ textAlign: 'left', padding: 12, borderBottom: '1px solid #e5e7eb' }}>Month</th>
-              <th style={{ textAlign: 'right', padding: 12, borderBottom: '1px solid #e5e7eb' }}>Amount</th>
-              <th style={{ textAlign: 'left', padding: 12, borderBottom: '1px solid #e5e7eb' }}>Status</th>
-              <th style={{ textAlign: 'left', padding: 12, borderBottom: '1px solid #e5e7eb' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.length === 0 && (
-              <tr>
-                <td colSpan={5} style={{ padding: 16, color: '#9ca3af' }}>No invoices for {ym}.</td>
-              </tr>
-            )}
-            {invoices.map((inv) => (
-              <tr key={inv.id}>
-                <td style={{ padding: 12, borderBottom: '1px solid #f3f4f6' }}>
-                  {inv.invoice_number ?? inv.id}
-                </td>
-                <td style={{ padding: 12, borderBottom: '1px solid #f3f4f6' }}>{inv.bill_month}</td>
-                <td style={{ padding: 12, borderBottom: '1px solid #f3f4f6', textAlign: 'right' }}>
-                  {money(inv.amount_due_cents)}
-                </td>
-                <td style={{ padding: 12, borderBottom: '1px solid #f3f4f6' }}>{inv.status.toUpperCase()}</td>
-                <td style={{ padding: 12, borderBottom: '1px solid #f3f4f6' }}>
-                  <a href={`/api/invoices/${inv.id}/pdf`} style={{ marginRight: 12 }}>PDF</a>
-                  <a href={`/api/invoices/${inv.id}/pdf-link`}>Signed link</a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <p style={{ marginTop: 14, color: '#6b7280' }}>
-        Tip: add <code>?month=YYYY-MM</code> to the URL to switch months.
-      </p>
-    </div>
-  );
+  return <PortalClient orgId={orgId} month={ym} kpi={k} invoices={invoices} plan={plan} properties={properties} />;
 }

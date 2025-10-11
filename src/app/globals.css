@@ -1,25 +1,202 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Warm off-white backgrounds with green accents only */
+  --color-background: #F8F6F2;
+  --color-foreground: #2c2c2c;
 
-  /* moved from @theme inline (no at-rule needed) */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: #ffffff;
+  --color-card-foreground: #2c2c2c;
+
+  --color-popover: #ffffff;
+  --color-popover-foreground: #2c2c2c;
+
+  --color-primary: #E1ECDB;
+  --color-primary-foreground: #2c2c2c;
+
+  --color-secondary: #F7F0E3;
+  --color-secondary-foreground: #2c2c2c;
+
+  --color-muted: #E1ECDB;
+  --color-muted-foreground: #5a5a5a;
+
+  --color-accent: #F7F0E3;
+  --color-accent-foreground: #2c2c2c;
+
+  --color-destructive: #d32f2f;
+  --color-destructive-foreground: #ffffff;
+
+  --color-border: #E1ECDB;
+  --color-input: #ffffff;
+  --color-ring: #E1ECDB;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Force light mode - override dark mode completely */
+html {
+  color-scheme: light;
+}
+
+/* Smooth transitions for everything */
+* {
+  border-color: var(--color-border);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+  background-color: #F8F6F2 !important;
+  color: #2c2c2c !important;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Input field hover animations */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+input[type="text"]:hover,
+input[type="email"]:hover,
+input[type="password"]:hover,
+input[type="number"]:hover,
+input[type="date"]:hover,
+input[type="tel"]:hover,
+input[type="url"]:hover,
+textarea:hover,
+select:hover {
+  border-color: #6b9b7a !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+textarea:focus,
+select:focus {
+  border-color: #6b9b7a !important;
+  box-shadow: 0 0 0 2px rgba(107, 155, 122, 0.1) !important;
+}
+
+/* Button hover animations */
+button {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Wave background animation */
+@keyframes wave {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+  }
+  50% {
+    transform: translateX(-25%) translateY(-10%);
+  }
+}
+
+@keyframes wave-shift {
+  0%, 100% {
+    transform: translateX(-10%) rotate(0deg);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateX(10%) rotate(2deg);
+    opacity: 0.6;
+  }
+}
+
+.wave-background {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.15;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.wave-background::before,
+.wave-background::after {
+  content: '';
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 50% 50%, rgba(225, 236, 219, 0.8) 0%, transparent 50%);
+  animation: wave 20s ease-in-out infinite;
+}
+
+.wave-background::before {
+  top: -50%;
+  left: -50%;
+  animation-delay: 0s;
+}
+
+.wave-background::after {
+  bottom: -50%;
+  right: -50%;
+  animation-delay: -10s;
+}
+
+/* Luxury shimmer animation */
+@keyframes shimmer {
+  0%, 100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
 }

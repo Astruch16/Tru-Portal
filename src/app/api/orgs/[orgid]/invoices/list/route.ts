@@ -21,8 +21,9 @@ function addOneMonth(ymd: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-export async function GET(req: NextRequest, { params }: { params: { orgid?: string } }) {
-  const orgId = uuidOf(params?.orgid);
+export async function GET(req: NextRequest, { params }: { params: Promise<{ orgid?: string }> }) {
+  const { orgid } = await params;
+  const orgId = uuidOf(orgid);
   if (!orgId) return NextResponse.json({ error: 'Bad org id' }, { status: 400 });
 
   const url = new URL(req.url);
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest, { params }: { params: { orgid?: stri
 
   let query = admin
     .from('invoices')
-    .select('id, invoice_number, bill_month, amount_due_cents, status')
+    .select('id, invoice_number, bill_month, amount_due_cents, status, property_id')
     .eq('org_id', orgId)
     .order('bill_month', { ascending: false });
 

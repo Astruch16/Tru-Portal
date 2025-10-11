@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(if exist .next rmdir /s /q .next)",
+      "Bash(powershell:*)",
+      "Bash(npm run dev)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(git restore:*)",
+      "Bash(tasklist)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(test:*)",
+      "Bash(git add:*)",
+      "Bash(rm:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

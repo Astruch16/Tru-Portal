@@ -3,6 +3,10 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 type Membership = { org_id: string; role: string | null };
 
@@ -25,7 +29,6 @@ export default function LoginPage() {
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) { setMsg(error.message); setBusy(false); return; }
 
-    // Find user's org (relies on RLS policy below)
     const { data, error: mErr } = await sb
       .from('org_memberships')
       .select('org_id, role')
@@ -44,32 +47,96 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ maxWidth: 420, margin: '80px auto', padding: 16, fontFamily: 'ui-sans-serif, system-ui' }}>
-      <h1 style={{ fontSize: 24, marginBottom: 12 }}>Sign in</h1>
-      <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
-        <input
-          type="email" placeholder="you@example.com" value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{ border: '1px solid #d1d5db', padding: '10px', borderRadius: 8 }}
-          required
-        />
-        <input
-          type="password" placeholder="Password" value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ border: '1px solid #d1d5db', padding: '10px', borderRadius: 8 }}
-          required
-        />
-        <button
-          type="submit" disabled={busy}
-          style={{ padding: '10px 12px', borderRadius: 8, background: '#111827', color: '#fff' }}
-        >
-          {busy ? 'Signing in…' : 'Sign in'}
-        </button>
-        <p style={{ marginTop: 10 }}>
-  <a href="/forgot" style={{ color: '#2563EB' }}>Forgot your password?</a>
-</p>
-      </form>
-      {msg && <p style={{ marginTop: 12 }}>{msg}</p>}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8F6F2] via-[#E1ECDB]/20 to-[#E1ECDB]/40 p-4 relative">
+      {/* Geometric pattern overlay */}
+      <div className="fixed inset-0 opacity-[0.15] pointer-events-none" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23E1ECDB' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        backgroundSize: '60px 60px'
+      }}></div>
+
+      <Card className="w-full max-w-md relative bg-card border-border shadow-xl">
+        <CardHeader className="space-y-4 text-center pb-8">
+          {/* TruHost Logo */}
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20">
+            <svg className="w-10 h-10 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </div>
+
+          <div className="space-y-2">
+            <CardTitle className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              TruHost
+            </CardTitle>
+            <CardDescription className="text-base">
+              Property Management Portal
+            </CardDescription>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="bg-background/50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="bg-background/50"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={busy}
+              className="w-full h-11 font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all cursor-pointer"
+            >
+              {busy ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  Signing in…
+                </div>
+              ) : (
+                'Sign in'
+              )}
+            </Button>
+          </form>
+
+          {msg && (
+            <div className={`text-sm p-3 rounded-md ${
+              msg.includes('Signed in')
+                ? 'bg-primary/10 text-primary border border-primary/20'
+                : 'bg-destructive/10 text-destructive border border-destructive/20'
+            }`}>
+              {msg}
+            </div>
+          )}
+
+          <div className="text-center">
+            <a
+              href="/forgot"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+            >
+              Forgot your password?
+            </a>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

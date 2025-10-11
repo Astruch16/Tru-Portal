@@ -13,8 +13,28 @@ function statusOf(s?: unknown) {
   return ['confirmed','completed','cancelled','pending'].includes(v) ? v : 'confirmed';
 }
 
-export async function POST(req: NextRequest, { params }: { params: { orgid?: string } }) {
-  const orgId = uuidOf(params?.orgid);
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ orgid?: string }> }) {
+  const { orgid } = await params;
+  const orgId = uuidOf(orgid);
+  if (!orgId) return NextResponse.json({ error: 'Bad org id' }, { status: 400 });
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return NextResponse.json({ error: 'Supabase env missing' }, { status: 500 });
+
+  const admin = createClient(url, key);
+  const { data, error } = await admin
+    .from('bookings')
+    .select('*, properties(name)')
+    .eq('org_id', orgId)
+    .order('check_in', { ascending: false });
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json({ ok: true, bookings: data ?? [] });
+}
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ orgid?: string }> }) {
+  const { orgid } = await params;
+  const orgId = uuidOf(orgid);
   if (!orgId) return NextResponse.json({ error: 'Bad org id' }, { status: 400 });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;

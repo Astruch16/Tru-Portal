@@ -8,8 +8,9 @@ function uuidOf(s?: string | null) {
   return m ? m[0].toLowerCase() : null;
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { orgid?: string } }) {
-  const orgId = uuidOf(params?.orgid);
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ orgid?: string }> }) {
+  const { orgid } = await params;
+  const orgId = uuidOf(orgid);
   if (!orgId) return NextResponse.json({ error: 'Bad org id' }, { status: 400 });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
