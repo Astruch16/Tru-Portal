@@ -208,6 +208,18 @@ export default function AdminPage() {
     }
   }, [orgId]);
 
+  // Auto-refresh users when window gains focus (to catch avatar updates)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (orgId) {
+        fetchUsers();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [orgId]);
+
   async function fetchProperties() {
     try {
       const res = await fetch(`/api/orgs/${orgId}/properties/list`);
@@ -220,12 +232,27 @@ export default function AdminPage() {
 
   async function fetchUsers() {
     try {
-      const res = await fetch(`/api/orgs/${orgId}/users`);
+      const res = await fetch(`/api/orgs/${orgId}/users`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
       const j = await res.json();
-      console.log('Fetched users:', j.users);
+      console.log('Fetched users from API:', j.users);
       if (res.ok) {
-        setUsers(j.users || []);
-        console.log('Users state updated with', j.users?.length, 'users');
+        // Add cache-busting timestamp to avatar URLs to force image refresh
+        const timestamp = Date.now();
+        const usersWithFreshAvatars = (j.users || []).map((user: any) => {
+          const freshUrl = user.avatar_url ? `${user.avatar_url.split('?')[0]}?t=${timestamp}` : null;
+          console.log(`User ${user.first_name}: avatar ${user.avatar_url} -> ${freshUrl}`);
+          return {
+            ...user,
+            avatar_url: freshUrl
+          };
+        });
+        setUsers(usersWithFreshAvatars);
+        console.log('Users state updated with', usersWithFreshAvatars?.length, 'users');
       }
     } catch (e) {
       console.error('Failed to fetch users:', e);

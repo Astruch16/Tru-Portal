@@ -21,7 +21,7 @@ function adminClient() {
 
 type Params = { orgid?: string };
 
-export async function GET(_req: NextRequest, ctx: { params: Promise<Params> }) {
+export async function GET(req: NextRequest, ctx: { params: Promise<Params> }) {
   try {
     const { orgid } = await ctx.params;
     const orgId = uuidOf(orgid);
@@ -29,10 +29,42 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<Params> }) {
 
     const admin = adminClient();
 
-    // Get the most recent plan for this org
-    const plan = await admin.from('plans')
+    // Get authenticated user
+    const authHeader = req.headers.get('authorization');
+    let userId: string | null = null;
+
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const { data } = await admin.auth.getUser(token);
+      userId = data.user?.id || null;
+    }
+
+    // If no bearer token, try to get user from cookies (SSR context)
+    if (!userId) {
+      // Try using supabaseServer for SSR
+      try {
+        const { supabaseServer } = await import('@/lib/supabase/server');
+        const sb = await supabaseServer();
+        const { data: { user } } = await sb.auth.getUser();
+        userId = user?.id || null;
+      } catch (e) {
+        // Ignore cookie errors, userId will remain null
+      }
+    }
+
+    // Get the most recent plan for this user and org
+    let planQuery = admin.from('plans')
       .select('tier, percent')
-      .eq('org_id', orgId)
+      .eq('org_id', orgId);
+
+    // If we have a userId, filter by it; otherwise get org-level plan (where user_id is null)
+    if (userId) {
+      planQuery = planQuery.eq('user_id', userId);
+    } else {
+      planQuery = planQuery.is('user_id', null);
+    }
+
+    const plan = await planQuery
       .order('effective_date', { ascending: false })
       .limit(1)
       .maybeSingle();

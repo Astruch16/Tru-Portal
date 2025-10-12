@@ -19,6 +19,9 @@ export async function POST(req: NextRequest) {
     const password = typeof body.password === 'string' ? body.password : '';
     const orgId = uuidOf(typeof body.org_id === 'string' ? body.org_id : null);
     const roleVal = (typeof body.role === 'string' ? body.role.toLowerCase() : 'member') as Role;
+    const firstName = typeof body.first_name === 'string' ? body.first_name.trim() : '';
+    const lastName = typeof body.last_name === 'string' ? body.last_name.trim() : '';
+    const planTier = typeof body.plan_tier === 'string' ? body.plan_tier : null;
 
     if (!email || !password) return NextResponse.json({ error: 'email and password required' }, { status: 400 });
     if (!orgId) return NextResponse.json({ error: 'org_id required (UUID)' }, { status: 400 });
@@ -68,9 +71,13 @@ export async function POST(req: NextRequest) {
       if (!ok) return NextResponse.json({ error: 'Auth user not visible yet; retry shortly', user_id: userId }, { status: 500 });
     }
 
-    // 3) Ensure profiles row exists if your FK references profiles.id
+    // 3) Create/update profile with first_name and last_name
     try {
-      const prof = await admin.from('profiles').upsert([{ id: userId }], { onConflict: 'id' });
+      const profileData: any = { id: userId };
+      if (firstName) profileData.first_name = firstName;
+      if (lastName) profileData.last_name = lastName;
+
+      const prof = await admin.from('profiles').upsert([profileData], { onConflict: 'id' });
       if (prof.error && !/relation .*profiles.* does not exist/i.test(prof.error.message)) {
         // Non-fatal if your FK targets auth.users instead
       }
@@ -93,6 +100,31 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
       return NextResponse.json({ error: link.error.message }, { status: 400 });
+    }
+
+    // 5) Create plan if plan_tier is provided
+    if (planTier && ['launch', 'elevate', 'maximize'].includes(planTier)) {
+      const percentMap: Record<string, number> = { launch: 12, elevate: 18, maximize: 22 };
+      const percent = percentMap[planTier];
+
+      const planData = {
+        org_id: orgId,
+        user_id: userId,
+        tier: planTier,
+        percent: percent,
+        effective_date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD
+      };
+
+      const planResult = await admin
+        .from('plans')
+        .insert([planData])
+        .select()
+        .single();
+
+      if (planResult.error) {
+        // Log error but don't fail the whole operation
+        console.error('Failed to create plan:', planResult.error);
+      }
     }
 
     return NextResponse.json({ ok: true, user: { id: userId, email }, membership: link.data });

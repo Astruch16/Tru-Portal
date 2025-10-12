@@ -86,10 +86,22 @@ export default async function PortalPage({
   const ym = (search?.month ?? new Date().toISOString().slice(0, 7)).slice(0, 7);
   const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-  // Plan
+  // Plan - fetch with authentication to get user-specific plan
   let plan: Plan | null = null;
   try {
-    const pr = await fetch(`${base}/api/orgs/${orgId}/plan`, { cache: 'no-store' });
+    const { supabaseServer } = await import('@/lib/supabase/server');
+    const sb = await supabaseServer();
+    const { data: { session } } = await sb.auth.getSession();
+
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
+    const pr = await fetch(`${base}/api/orgs/${orgId}/plan`, {
+      cache: 'no-store',
+      headers
+    });
     const pj = await pr.json().catch(() => ({}));
     const p = isRecord(pj) && isRecord((pj as Record<string, unknown>).plan) ? (pj as Record<string, unknown>).plan : null;
     if (p && isPlan(p)) plan = p;

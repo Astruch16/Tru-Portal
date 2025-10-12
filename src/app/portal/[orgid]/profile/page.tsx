@@ -15,8 +15,8 @@ import Link from 'next/link';
 
 type Profile = {
   id: string;
-  username: string | null;
-  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   avatar_url: string | null;
 };
 
@@ -27,7 +27,10 @@ type Plan = {
 
 type UserProperty = {
   id: string;
-  airbnb_name: string;
+  property_id: string;
+  property_name: string;
+  property_address: string | null;
+  airbnb_name: string | null;
   airbnb_url: string | null;
 };
 
@@ -43,8 +46,8 @@ export default function ProfilePage() {
   const [properties, setProperties] = useState<UserProperty[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [username, setUsername] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
@@ -71,8 +74,8 @@ export default function ProfilePage() {
 
       if (profileData) {
         setProfile(profileData);
-        setUsername(profileData.username || '');
-        setFullName(profileData.full_name || '');
+        setFirstName(profileData.first_name || '');
+        setLastName(profileData.last_name || '');
       }
 
       // Load plan
@@ -82,14 +85,32 @@ export default function ProfilePage() {
         setPlan(planJson.plan);
       }
 
-      // Load user properties
+      // Load user properties with property details
       const { data: propsData } = await sb
         .from('user_properties')
-        .select('id, airbnb_name, airbnb_url')
+        .select(`
+          id,
+          property_id,
+          airbnb_name,
+          airbnb_url,
+          properties (
+            name,
+            address
+          )
+        `)
         .eq('user_id', user.id);
 
       if (propsData) {
-        setProperties(propsData);
+        // Transform the data to flatten the properties object
+        const transformedProps = propsData.map((up: any) => ({
+          id: up.id,
+          property_id: up.property_id,
+          property_name: up.properties?.name || 'Unnamed Property',
+          property_address: up.properties?.address || null,
+          airbnb_name: up.airbnb_name,
+          airbnb_url: up.airbnb_url,
+        }));
+        setProperties(transformedProps);
       }
 
       setLoading(false);
@@ -106,18 +127,30 @@ export default function ProfilePage() {
     const formData = new FormData();
     formData.append('avatar', file);
 
-    const res = await fetch('/api/profile/avatar', {
-      method: 'POST',
-      body: formData,
-    });
+    try {
+      const res = await fetch('/api/profile/avatar', {
+        method: 'POST',
+        body: formData,
+      });
 
-    if (res.ok) {
       const data = await res.json();
-      setProfile(prev => prev ? { ...prev, avatar_url: data.avatar_url } : null);
-      setMessage('Avatar updated successfully!');
-      setTimeout(() => setMessage(''), 3000);
-    } else {
-      setMessage('Failed to upload avatar');
+
+      if (res.ok) {
+        console.log('Avatar upload response:', data);
+        // Add cache-busting timestamp to force image refresh
+        const avatarUrlWithCache = `${data.avatar_url}?t=${Date.now()}`;
+        setProfile(prev => prev ? { ...prev, avatar_url: avatarUrlWithCache } : null);
+        setMessage('Avatar updated successfully!');
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        console.error('Avatar upload error:', data);
+        setMessage(`Failed to upload avatar: ${data.error || 'Unknown error'}`);
+        setTimeout(() => setMessage(''), 5000);
+      }
+    } catch (error) {
+      console.error('Avatar upload exception:', error);
+      setMessage('Failed to upload avatar: Network error');
+      setTimeout(() => setMessage(''), 5000);
     }
 
     setUploading(false);
@@ -130,12 +163,12 @@ export default function ProfilePage() {
     const res = await fetch('/api/profile/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, full_name: fullName }),
+      body: JSON.stringify({ first_name: firstName, last_name: lastName }),
     });
 
     if (res.ok) {
       const data = await res.json();
-      setProfile(prev => prev ? { ...prev, username: data.username, full_name: data.full_name } : null);
+      setProfile(prev => prev ? { ...prev, first_name: data.first_name, last_name: data.last_name } : null);
       setMessage('Profile updated successfully!');
       setTimeout(() => setMessage(''), 3000);
     } else {
@@ -196,7 +229,8 @@ export default function ProfilePage() {
     );
   }
 
-  const initials = (profile?.full_name || profile?.username || 'U')
+  const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ');
+  const initials = (fullName || 'U')
     .split(' ')
     .map(n => n[0])
     .join('')
@@ -327,22 +361,22 @@ export default function ProfilePage() {
             <CardContent>
               <form onSubmit={handleSaveProfile} className="space-y-4">
                 <div>
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="firstName">First Name</Label>
                   <Input
-                    id="username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="johndoe"
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="John"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="lastName">Last Name</Label>
                   <Input
-                    id="fullName"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="John Doe"
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Doe"
                     className="mt-1"
                   />
                 </div>
@@ -454,13 +488,27 @@ export default function ProfilePage() {
                           </svg>
                         </div>
                         <div>
-                          <p className="font-semibold">{prop.airbnb_name}</p>
+                          <p className="font-semibold">{prop.property_name}</p>
+                          {prop.property_address && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              {prop.property_address}
+                            </p>
+                          )}
+                          {prop.airbnb_name && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Airbnb: {prop.airbnb_name}
+                            </p>
+                          )}
                           {prop.airbnb_url && (
                             <a
                               href={prop.airbnb_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                              className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1"
                             >
                               View on Airbnb
                               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -47,18 +47,51 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<Param
       .select('id, first_name, last_name, avatar_url')
       .in('id', userIds);
 
+    // Get plans for each user
+    const { data: plans } = await admin
+      .from('plans')
+      .select('org_id, user_id, tier, percent')
+      .eq('org_id', orgId)
+      .in('user_id', userIds)
+      .order('effective_date', { ascending: false });
+
+    // Get user properties
+    const { data: userProperties } = await admin
+      .from('user_properties')
+      .select('user_id, property_id, properties(id, name, address)')
+      .in('user_id', userIds);
+
+    // Get invoices for each user
+    const { data: invoices } = await admin
+      .from('invoices')
+      .select('user_id, id, invoice_number, bill_month, amount_due_cents, status')
+      .eq('org_id', orgId)
+      .in('user_id', userIds)
+      .order('bill_month', { ascending: false });
+
     // Combine data
     const users = (memberships ?? []).map((m: any) => {
       const authUser = authUsers.find(u => u.data?.user?.id === m.user_id)?.data?.user;
       const profile = (profiles ?? []).find((p: any) => p.id === m.user_id);
+      const userPlan = (plans ?? []).find((p: any) => p.user_id === m.user_id);
+      const userProps = (userProperties ?? [])
+        .filter((up: any) => up.user_id === m.user_id)
+        .map((up: any) => up.properties);
+      const userInvoices = (invoices ?? []).filter((inv: any) => inv.user_id === m.user_id);
 
       return {
         id: m.user_id,
         email: authUser?.email ?? '',
+        first_name: profile?.first_name ?? '',
+        last_name: profile?.last_name ?? '',
         full_name: profile ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() : '',
         username: profile?.first_name ?? '',
         avatar_url: profile?.avatar_url ?? null,
         role: m.role,
+        plan_tier: userPlan?.tier ?? null,
+        plan_percent: userPlan?.percent ?? null,
+        properties: userProps,
+        invoices: userInvoices,
       };
     });
 

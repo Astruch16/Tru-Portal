@@ -8,9 +8,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { user_id, property_id, airbnb_name, airbnb_url } = body;
 
-    if (!user_id || !property_id || !airbnb_name) {
+    if (!user_id || !property_id) {
       return NextResponse.json(
-        { error: 'user_id, property_id, and airbnb_name are required' },
+        { error: 'user_id and property_id are required' },
         { status: 400 }
       );
     }
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       .upsert({
         user_id,
         property_id,
-        airbnb_name,
+        airbnb_name: airbnb_name || null,
         airbnb_url: airbnb_url || null,
         updated_at: new Date().toISOString(),
       })
