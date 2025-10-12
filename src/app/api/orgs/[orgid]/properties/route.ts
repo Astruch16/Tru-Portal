@@ -33,7 +33,7 @@ export async function POST(
     return NextResponse.json({ error: 'Missing property name' }, { status: 400 });
   }
 
-  const name = (body as { name: unknown }).name;
+  const { name, address, property_type, airbnb_link } = body as any;
   if (typeof name !== 'string' || !name.trim()) {
     return NextResponse.json({ error: 'Property name must be a non-empty string' }, { status: 400 });
   }
@@ -41,7 +41,14 @@ export async function POST(
   // Create property
   const { data, error } = await admin
     .from('properties')
-    .insert({ org_id: orgId, name: name.trim() })
+    .insert({
+      org_id: orgId,
+      name: name.trim(),
+      address: address?.trim() || null,
+      property_type: property_type || null,
+      airbnb_link: airbnb_link || null,
+      created_at: new Date().toISOString(),
+    })
     .select()
     .single();
 

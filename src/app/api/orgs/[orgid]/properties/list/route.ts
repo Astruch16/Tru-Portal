@@ -18,12 +18,57 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ org
   if (!url || !key) return NextResponse.json({ error: 'Supabase env missing' }, { status: 500 });
 
   const admin = createClient(url, key);
-  const { data, error } = await admin
+
+  // First, get all properties
+  const { data: propertiesData, error: propertiesError } = await admin
     .from('properties')
-    .select('id, name')
+    .select('id, name, address, property_type, airbnb_link')
     .eq('org_id', orgId)
     .order('name', { ascending: true });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ ok: true, properties: data ?? [] });
+  if (propertiesError) return NextResponse.json({ error: propertiesError.message }, { status: 400 });
+
+  // Then, get all user_properties relationships
+  const { data: userPropertiesData } = await admin
+    .from('user_properties')
+    .select(`
+      property_id,
+      users (
+        id,
+        first_name,
+        last_name,
+        email
+      )
+    `);
+
+  // Create a map of property_id to user
+  const propertyUserMap = new Map();
+  if (userPropertiesData) {
+    userPropertiesData.forEach((up: any) => {
+      if (up.users) {
+        propertyUserMap.set(up.property_id, up.users);
+      }
+    });
+  }
+
+  // Combine the data
+  const properties = (propertiesData ?? []).map((prop: any) => {
+    const user = propertyUserMap.get(prop.id);
+
+    return {
+      id: prop.id,
+      name: prop.name,
+      address: prop.address,
+      property_type: prop.property_type,
+      airbnb_link: prop.airbnb_link,
+      assigned_user: user ? {
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email
+      } : null
+    };
+  });
+
+  return NextResponse.json({ ok: true, properties });
 }
