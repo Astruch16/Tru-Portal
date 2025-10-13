@@ -69,6 +69,12 @@ export default function AdminPage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [busyBooking, setBusyBooking] = useState(false);
 
+  // --- Booking filters ---
+  const [bookingFilterProperty, setBookingFilterProperty] = useState<string>('all');
+  const [bookingFilterStatus, setBookingFilterStatus] = useState<string>('all');
+  const [bookingFilterMonth, setBookingFilterMonth] = useState<string>('all');
+  const [bookingSortBy, setBookingSortBy] = useState<'date-asc' | 'date-desc' | 'property'>('date-desc');
+
   // --- Invoice list state ---
   const [invoices, setInvoices] = useState<any[]>([]);
 
@@ -222,8 +228,14 @@ export default function AdminPage() {
 
   async function fetchProperties() {
     try {
-      const res = await fetch(`/api/orgs/${orgId}/properties/list`);
+      const res = await fetch(`/api/orgs/${orgId}/properties/list`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
       const j = await res.json();
+      console.log('Fetched properties:', j.properties);
       if (res.ok) setProperties(j.properties || []);
     } catch (e) {
       console.error('Failed to fetch properties:', e);
@@ -332,6 +344,26 @@ export default function AdminPage() {
     }
   }
 
+  async function deleteUser(userId: string) {
+    if (!confirm('Are you sure you want to delete this user? This will remove them from the organization.')) return;
+    try {
+      const res = await fetch(`/api/orgs/${orgId}/users`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId }),
+      });
+      const j = await res.json();
+      if (res.ok) {
+        setMsg('✓ User removed from organization');
+        fetchUsers();
+      } else {
+        setMsg(`Error: ${j.error || 'Failed to delete user'}`);
+      }
+    } catch (e) {
+      setMsg(`Network error: ${(e as Error).message}`);
+    }
+  }
+
   // --- Assign Property action ---
   async function assignProperty() {
     if (!selectedPropertyId || !selectedUserId) {
@@ -350,6 +382,8 @@ export default function AdminPage() {
         setMsg('✓ Property assigned to user');
         setSelectedPropertyId('');
         setSelectedUserId('');
+        // Refresh properties list to show updated assignment
+        fetchProperties();
       } else {
         setMsg(`Error: ${j.error || 'Failed to assign property'}`);
       }
@@ -567,6 +601,61 @@ export default function AdminPage() {
       setUpdatingPlan(false);
     }
   }
+
+  // Function to get icon based on property type
+  const getPropertyIcon = (type: string) => {
+    switch(type) {
+      case 'house':
+        return (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+        );
+      case 'apartment':
+      case 'condo':
+        return (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+        );
+      case 'villa':
+        return (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+          </svg>
+        );
+      case 'cabin':
+        return (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21h18M4 18h16M6 6l6-3 6 3M6 6v12M18 6v12M9 10h6v8H9v-8z" />
+          </svg>
+        );
+      case 'basement_suite':
+        return (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7M19 21V9m0 12h2m-2 0h-5m-9 0H3m2 0h5" />
+          </svg>
+        );
+      case 'garden_suite':
+        return (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+        );
+      case 'carriage_house':
+        return (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8F6F2] via-[#E1ECDB]/20 to-[#E1ECDB]/40">
@@ -905,66 +994,10 @@ export default function AdminPage() {
                   </div>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {properties.map((prop, index) => {
-                      // Function to get icon based on property type
-                      const getPropertyIcon = (type: string) => {
-                        switch(type) {
-                          case 'house':
-                            return (
-                              <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                              </svg>
-                            );
-                          case 'apartment':
-                          case 'condo':
-                            return (
-                              <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                              </svg>
-                            );
-                          case 'villa':
-                            return (
-                              <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-                              </svg>
-                            );
-                          case 'cabin':
-                            return (
-                              <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21h18M4 18h16M6 6l6-3 6 3M6 6v12M18 6v12M9 10h6v8H9v-8z" />
-                              </svg>
-                            );
-                          case 'basement_suite':
-                            return (
-                              <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7M19 21V9m0 12h2m-2 0h-5m-9 0H3m2 0h5" />
-                              </svg>
-                            );
-                          case 'garden_suite':
-                            return (
-                              <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                              </svg>
-                            );
-                          case 'carriage_house':
-                            return (
-                              <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                              </svg>
-                            );
-                          default:
-                            return (
-                              <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                              </svg>
-                            );
-                        }
-                      };
-
-                      return (
+                    {properties.map((prop, index) => (
                         <Card
                           key={prop.id}
-                          className="group relative overflow-hidden cursor-pointer transition-all duration-[800ms] ease-[cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-1 hover:shadow-xl border-border/50 bg-gradient-to-br from-card via-card to-card/80 backdrop-blur-sm"
+                          className="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg border-border/50 bg-gradient-to-br from-card via-card to-card/80 backdrop-blur-sm"
                           style={{
                             animation: 'fadeIn 0.5s ease-out forwards',
                             animationDelay: `${index * 100}ms`,
@@ -973,19 +1006,19 @@ export default function AdminPage() {
                           onClick={() => openPropertyModal(prop)}
                         >
                           {/* Decorative gradient overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-[800ms] ease-[cubic-bezier(0.4,0,0.2,1)]"></div>
+                          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out"></div>
 
                           {/* Decorative corner accent */}
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-full -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity duration-[800ms] ease-[cubic-bezier(0.4,0,0.2,1)]"></div>
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-full -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out"></div>
 
                           <div className="relative p-5">
                             {/* Property Icon & Name */}
                             <div className="flex items-start gap-3 mb-3">
-                              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-[800ms] ease-[cubic-bezier(0.4,0,0.2,1)]">
+                              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center group-hover:scale-105 transition-transform duration-200 ease-out">
                                 {getPropertyIcon(prop.property_type)}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-base mb-1 truncate group-hover:text-primary transition-colors duration-[800ms] ease-[cubic-bezier(0.4,0,0.2,1)]">
+                                <h4 className="font-semibold text-base mb-1 truncate group-hover:text-primary transition-colors duration-200 ease-out">
                                   {prop.name}
                                 </h4>
                                 {prop.address && (
@@ -1005,7 +1038,7 @@ export default function AdminPage() {
                             {/* Badges Row */}
                             <div className="flex items-center gap-2 flex-wrap">
                               {prop.property_type && (
-                                <Badge variant="secondary" className="text-xs font-medium border-primary/20 bg-primary/5 text-primary group-hover:border-primary/40 transition-colors duration-[800ms] ease-[cubic-bezier(0.4,0,0.2,1)]">
+                                <Badge variant="secondary" className="text-xs font-medium border-primary/20 bg-primary/5 text-black group-hover:border-primary/40 transition-colors duration-200 ease-out">
                                   <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                                   </svg>
@@ -1079,8 +1112,7 @@ export default function AdminPage() {
                           </svg>
                         </button>
                       </Card>
-                      );
-                    })}
+                    ))}
                   </div>
                 )}
               </div>
@@ -1218,52 +1250,251 @@ export default function AdminPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                   All Bookings
+                  <Badge variant="outline" className="ml-auto text-xs">
+                    {bookings.length} total
+                  </Badge>
                 </h3>
+
+                {/* Filters and Sorting */}
+                {bookings.length > 0 && (
+                  <div className="mb-4 p-4 rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm">
+                    <div className="grid gap-3 md:grid-cols-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="filter-property" className="text-xs text-muted-foreground">
+                          Filter by Property
+                        </Label>
+                        <select
+                          id="filter-property"
+                          value={bookingFilterProperty}
+                          onChange={(e) => setBookingFilterProperty(e.target.value)}
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                        >
+                          <option value="all">All Properties</option>
+                          {properties.map((prop) => (
+                            <option key={prop.id} value={prop.id}>{prop.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="filter-status" className="text-xs text-muted-foreground">
+                          Filter by Status
+                        </Label>
+                        <select
+                          id="filter-status"
+                          value={bookingFilterStatus}
+                          onChange={(e) => setBookingFilterStatus(e.target.value)}
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                        >
+                          <option value="all">All Statuses</option>
+                          <option value="upcoming">Upcoming</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="filter-month" className="text-xs text-muted-foreground">
+                          Filter by Month
+                        </Label>
+                        <select
+                          id="filter-month"
+                          value={bookingFilterMonth}
+                          onChange={(e) => setBookingFilterMonth(e.target.value)}
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                        >
+                          <option value="all">All Months</option>
+                          {Array.from(new Set(bookings.map(b => new Date(b.check_in).toISOString().slice(0, 7)))).sort().reverse().map(month => (
+                            <option key={month} value={month}>
+                              {new Date(month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="sort-by" className="text-xs text-muted-foreground">
+                          Sort By
+                        </Label>
+                        <select
+                          id="sort-by"
+                          value={bookingSortBy}
+                          onChange={(e) => setBookingSortBy(e.target.value as any)}
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                        >
+                          <option value="date-desc">Newest First</option>
+                          <option value="date-asc">Oldest First</option>
+                          <option value="property">By Property</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Active Filters Display */}
+                    {(bookingFilterProperty !== 'all' || bookingFilterStatus !== 'all' || bookingFilterMonth !== 'all') && (
+                      <div className="mt-3 flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-muted-foreground">Active filters:</span>
+                        {bookingFilterProperty !== 'all' && (
+                          <Badge variant="secondary" className="text-xs">
+                            Property: {properties.find(p => p.id === bookingFilterProperty)?.name}
+                            <button
+                              onClick={() => setBookingFilterProperty('all')}
+                              className="ml-1 hover:text-destructive"
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        )}
+                        {bookingFilterStatus !== 'all' && (
+                          <Badge variant="secondary" className="text-xs">
+                            Status: {bookingFilterStatus}
+                            <button
+                              onClick={() => setBookingFilterStatus('all')}
+                              className="ml-1 hover:text-destructive"
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        )}
+                        {bookingFilterMonth !== 'all' && (
+                          <Badge variant="secondary" className="text-xs">
+                            Month: {new Date(bookingFilterMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            <button
+                              onClick={() => setBookingFilterMonth('all')}
+                              className="ml-1 hover:text-destructive"
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setBookingFilterProperty('all');
+                            setBookingFilterStatus('all');
+                            setBookingFilterMonth('all');
+                          }}
+                          className="h-6 text-xs cursor-pointer"
+                        >
+                          Clear all
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {bookings.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No bookings yet.</p>
                 ) : (
-                  <div className="space-y-3">
-                    {properties.map((prop) => {
-                      const propBookings = bookings.filter(b => b.property_id === prop.id);
-                      if (propBookings.length === 0) return null;
-                      return (
-                        <div key={prop.id} className="space-y-2">
-                          <h4 className="text-sm font-medium text-muted-foreground">{prop.name}</h4>
-                          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="space-y-6">
+                    {(() => {
+                      // Apply filters
+                      let filteredBookings = bookings.filter(b => {
+                        if (bookingFilterProperty !== 'all' && b.property_id !== bookingFilterProperty) return false;
+                        if (bookingFilterStatus !== 'all' && b.status !== bookingFilterStatus) return false;
+                        if (bookingFilterMonth !== 'all' && !b.check_in.startsWith(bookingFilterMonth)) return false;
+                        return true;
+                      });
+
+                      // Apply sorting
+                      if (bookingSortBy === 'date-asc') {
+                        filteredBookings.sort((a, b) => new Date(a.check_in).getTime() - new Date(b.check_in).getTime());
+                      } else if (bookingSortBy === 'date-desc') {
+                        filteredBookings.sort((a, b) => new Date(b.check_in).getTime() - new Date(a.check_in).getTime());
+                      }
+
+                      // Group by property
+                      const groupedByProperty = properties.map(prop => ({
+                        property: prop,
+                        bookings: filteredBookings.filter(b => b.property_id === prop.id)
+                      })).filter(group => group.bookings.length > 0);
+
+                      if (groupedByProperty.length === 0) {
+                        return <p className="text-sm text-muted-foreground">No bookings match the selected filters.</p>;
+                      }
+
+                      return groupedByProperty.map(({ property: prop, bookings: propBookings }) => (
+                        <div key={prop.id} className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            <h4 className="text-sm font-semibold text-foreground">{prop.name}</h4>
+                            <Badge variant="outline" className="text-xs bg-primary/5 border-primary/20">
+                              {propBookings.length} {propBookings.length === 1 ? 'booking' : 'bookings'}
+                            </Badge>
+                          </div>
+                          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                             {propBookings.map((booking) => (
-                              <Card key={booking.id} className="p-3 border-border/50 bg-card/80 backdrop-blur-sm">
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs text-muted-foreground">
-                                      {new Date(booking.check_in).toLocaleDateString()} - {new Date(booking.check_out).toLocaleDateString()}
-                                    </span>
+                              <Card key={booking.id} className="group relative overflow-hidden hover:shadow-md transition-all duration-200 border-border/50 bg-gradient-to-br from-card to-card/80">
+                                {/* Decorative top bar */}
+                                <div className={`h-1 ${
+                                  booking.status === 'completed' ? 'bg-primary' :
+                                  booking.status === 'upcoming' ? 'bg-blue-500' :
+                                  'bg-red-500'
+                                }`}></div>
+
+                                <div className="p-4 space-y-3">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        Check-in
+                                      </div>
+                                      <p className="text-sm font-medium text-foreground">
+                                        {new Date(booking.check_in).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                      </p>
+                                    </div>
                                     <Badge
-                                      variant={booking.status === 'completed' ? 'default' : booking.status === 'upcoming' ? 'secondary' : 'outline'}
-                                      className={
-                                        booking.status === 'completed' ? 'bg-primary/20 text-primary border-primary' :
-                                        booking.status === 'cancelled' ? 'bg-red-500/20 text-red-600 border-red-500' :
-                                        ''
-                                      }
+                                      variant="outline"
+                                      className={`text-xs font-medium ${
+                                        booking.status === 'completed' ? 'bg-green-50 text-black border-green-200' :
+                                        booking.status === 'upcoming' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                        'bg-red-50 text-red-700 border-red-200'
+                                      }`}
                                     >
-                                      {booking.status}
+                                      {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                                     </Badge>
                                   </div>
-                                  <select
-                                    value={booking.status}
-                                    onChange={(e) => updateBookingStatus(booking.id, e.target.value as any)}
-                                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-                                  >
-                                    <option value="upcoming">Upcoming</option>
-                                    <option value="completed">Completed</option>
-                                    <option value="cancelled">Cancelled</option>
-                                  </select>
+
+                                  <div>
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                      </svg>
+                                      Check-out
+                                    </div>
+                                    <p className="text-sm font-medium text-foreground">
+                                      {new Date(booking.check_out).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </p>
+                                  </div>
+
+                                  <Separator className="bg-border/50" />
+
+                                  <div className="space-y-1.5">
+                                    <Label htmlFor={`booking-status-${booking.id}`} className="text-xs text-muted-foreground">
+                                      Update Status
+                                    </Label>
+                                    <select
+                                      id={`booking-status-${booking.id}`}
+                                      value={booking.status}
+                                      onChange={(e) => updateBookingStatus(booking.id, e.target.value as any)}
+                                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer hover:border-primary/50"
+                                    >
+                                      <option value="upcoming">Upcoming</option>
+                                      <option value="completed">Completed</option>
+                                      <option value="cancelled">Cancelled</option>
+                                    </select>
+                                  </div>
                                 </div>
                               </Card>
                             ))}
                           </div>
                         </div>
-                      );
-                    })}
+                      ));
+                    })()}
                   </div>
                 )}
               </div>
@@ -1830,202 +2061,293 @@ export default function AdminPage() {
 
       {/* Property Details Modal */}
       <Dialog open={showPropertyModal} onOpenChange={setShowPropertyModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden flex flex-col p-0">
           {selectedProperty && (
             <>
               {/* Header */}
-              <div className="relative -m-6 mb-6 p-8 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-b overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/20 to-transparent rounded-full -mr-32 -mt-32"></div>
+              <div className="relative p-8 bg-gradient-to-br from-primary/5 via-background to-background border-b shrink-0">
+                {/* Decorative elements */}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl -mr-48 -mt-48"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-primary/5 to-transparent rounded-full blur-2xl -ml-32 -mb-32"></div>
 
                 <div className="relative">
-                  <DialogTitle className="text-2xl font-bold mb-2 flex items-center gap-2">
-                    <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    {selectedProperty.name}
+                  <DialogTitle className="text-3xl font-bold mb-3 flex items-center gap-3">
+                    <div className="p-3 rounded-xl bg-primary/10 text-primary">
+                      {getPropertyIcon(selectedProperty.property_type)}
+                    </div>
+                    <div>
+                      {selectedProperty.name}
+                      {selectedProperty.assigned_user && (
+                        <div className="text-sm font-normal text-muted-foreground mt-1">
+                          Managed by {selectedProperty.assigned_user.first_name} {selectedProperty.assigned_user.last_name}
+                        </div>
+                      )}
+                    </div>
                   </DialogTitle>
-                  <div className="space-y-2">
+                  <div className="flex items-center gap-3 flex-wrap">
                     {selectedProperty.address && (
-                      <div className="flex items-center gap-2">
-                        <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card/50 border border-border/50">
+                        <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        <span className="text-sm text-muted-foreground">{selectedProperty.address}</span>
+                        <span className="text-sm">{selectedProperty.address}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {selectedProperty.property_type && (
-                        <Badge variant="secondary" className="font-medium">
-                          {selectedProperty.property_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                        </Badge>
-                      )}
-                      {selectedProperty.airbnb_link && (
-                        <a
-                          href={selectedProperty.airbnb_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                        >
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                          View on Airbnb
-                        </a>
-                      )}
-                    </div>
+                    {selectedProperty.property_type && (
+                      <Badge variant="secondary" className="text-sm px-3 py-1 bg-primary/10 border-primary/20 text-black">
+                        {selectedProperty.property_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                      </Badge>
+                    )}
+                    {selectedProperty.airbnb_link && (
+                      <a
+                        href={selectedProperty.airbnb_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        View on Airbnb
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Month Selector */}
-              <div className="px-6 mb-4">
-                <div className="flex items-center gap-3">
-                  <Label htmlFor="property-month" className="text-sm font-medium">Month</Label>
-                  <Input
-                    id="property-month"
-                    type="month"
-                    value={propertyMonth}
-                    onChange={async (e) => {
-                      setPropertyMonth(e.target.value);
-                      // Re-fetch KPIs for new month
-                      try {
-                        const res = await fetch(`/api/orgs/${orgId}/properties/${selectedProperty.id}/kpis?month=${e.target.value}`);
-                        const data = await res.json();
-                        if (res.ok) {
-                          setPropertyKpis(data.kpis || null);
-                        }
-                      } catch (err) {
-                        console.error('Failed to fetch KPIs:', err);
-                      }
-                    }}
-                    className="w-48 cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              {/* KPI Metrics */}
-              <div className="px-6 pb-6">
-                {propertyKpis ? (
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    {/* Gross Revenue */}
-                    <Card className="p-4 bg-gradient-to-br from-green-50 to-transparent border-green-200">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="text-2xl">💰</div>
-                        <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                        </svg>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-1">Gross Revenue</p>
-                      <p className="text-2xl font-bold text-green-700">
-                        ${((propertyKpis.gross_revenue_cents || 0) / 100).toFixed(2)}
-                      </p>
-                    </Card>
-
-                    {/* Expenses */}
-                    <Card className="p-4 bg-gradient-to-br from-red-50 to-transparent border-red-200">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="text-2xl">💸</div>
-                        <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-                        </svg>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-1">Expenses</p>
-                      <p className="text-2xl font-bold text-red-700">
-                        ${((propertyKpis.expenses_cents || 0) / 100).toFixed(2)}
-                      </p>
-                    </Card>
-
-                    {/* Net Revenue */}
-                    <Card className="p-4 bg-gradient-to-br from-blue-50 to-transparent border-blue-200">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="text-2xl">📈</div>
-                        <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-1">Net Revenue</p>
-                      <p className="text-2xl font-bold text-blue-700">
-                        ${(((propertyKpis.gross_revenue_cents || 0) - (propertyKpis.expenses_cents || 0)) / 100).toFixed(2)}
-                      </p>
-                    </Card>
-
-                    {/* Nights Booked */}
-                    <Card className="p-4 bg-gradient-to-br from-cyan-50 to-transparent border-cyan-200">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="text-2xl">🏠</div>
-                        <svg className="w-5 h-5 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {/* Month Selector & Content */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-8 space-y-6">
+                  {/* Month Selector */}
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-card/50 border border-border/50">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                       </div>
-                      <p className="text-xs text-muted-foreground mb-1">Nights Booked</p>
-                      <p className="text-2xl font-bold text-cyan-700">
-                        {propertyKpis.nights_booked || 0}
-                      </p>
-                    </Card>
-
-                    {/* Occupancy Rate */}
-                    <Card className="p-4 bg-gradient-to-br from-purple-50 to-transparent border-purple-200">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="text-2xl">📊</div>
-                        <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-1">Occupancy Rate</p>
-                      <p className="text-2xl font-bold text-purple-700">
-                        {((propertyKpis.occupancy_rate || 0) * 100).toFixed(1)}%
-                      </p>
-                    </Card>
-
-                    {/* Vacancy Rate */}
-                    <Card className="p-4 bg-gradient-to-br from-orange-50 to-transparent border-orange-200">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="text-2xl">📉</div>
-                        <svg className="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-                        </svg>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-1">Vacancy Rate</p>
-                      <p className="text-2xl font-bold text-orange-700">
-                        {((propertyKpis.vacancy_rate || 0) * 100).toFixed(1)}%
-                      </p>
-                    </Card>
-
-                    {/* TruHost Fees */}
-                    <Card className="p-4 bg-gradient-to-br from-slate-50 to-transparent border-slate-200">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="text-2xl">🏢</div>
-                        <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-1">TruHost Fees</p>
-                      <p className="text-2xl font-bold text-slate-700">
-                        ${(((propertyKpis.gross_revenue_cents || 0) * (propertyKpis.fee_percent || 12)) / 10000).toFixed(2)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        ({propertyKpis.fee_percent || 12}%)
-                      </p>
-                    </Card>
-
-                    {/* Properties Count (if aggregate) */}
-                    {propertyKpis.properties && (
-                      <Card className="p-4 bg-gradient-to-br from-indigo-50 to-transparent border-indigo-200">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="text-2xl">🏘️</div>
-                          <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
+                      <div>
+                        <Label htmlFor="property-month" className="text-sm font-medium text-muted-foreground">Performance Period</Label>
+                        <div className="text-lg font-semibold">
+                          {new Date(propertyMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                         </div>
-                        <p className="text-xs text-muted-foreground mb-1">Properties</p>
-                        <p className="text-2xl font-bold text-indigo-700">
-                          {propertyKpis.properties}
-                        </p>
-                      </Card>
-                    )}
+                      </div>
+                    </div>
+                    <Input
+                      id="property-month"
+                      type="month"
+                      value={propertyMonth}
+                      onChange={async (e) => {
+                        setPropertyMonth(e.target.value);
+                        try {
+                          const res = await fetch(`/api/orgs/${orgId}/properties/${selectedProperty.id}/kpis?month=${e.target.value}`);
+                          const data = await res.json();
+                          if (res.ok) {
+                            setPropertyKpis(data.kpis || null);
+                          }
+                        } catch (err) {
+                          console.error('Failed to fetch KPIs:', err);
+                        }
+                      }}
+                      className="w-56 cursor-pointer"
+                    />
                   </div>
+
+                  {/* KPI Metrics */}
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-foreground">Performance Metrics</h3>
+                      <Badge variant="outline" className="text-xs">
+                        Last Updated: {new Date().toLocaleDateString()}
+                      </Badge>
+                    </div>
+
+                {propertyKpis ? (
+                  <>
+                    {/* Main Metrics Grid */}
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                      {/* Gross Revenue */}
+                      <Card className="group relative p-5 bg-gradient-to-br from-green-50 via-green-50/50 to-background border-green-200 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full blur-2xl"></div>
+                        <div className="relative">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="p-2 rounded-lg bg-green-100 text-green-700">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <div className="p-1.5 rounded-md bg-green-100/50">
+                              <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                              </svg>
+                            </div>
+                          </div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2">Gross Revenue</p>
+                          <p className="text-3xl font-bold text-green-700 tracking-tight">
+                            ${((propertyKpis.gross_revenue_cents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </Card>
+
+                      {/* Expenses */}
+                      <Card className="group relative p-5 bg-gradient-to-br from-red-50 via-red-50/50 to-background border-red-200 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl"></div>
+                        <div className="relative">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="p-2 rounded-lg bg-red-100 text-red-700">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                              </svg>
+                            </div>
+                            <div className="p-1.5 rounded-md bg-red-100/50">
+                              <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                              </svg>
+                            </div>
+                          </div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2">Expenses</p>
+                          <p className="text-3xl font-bold text-red-700 tracking-tight">
+                            ${((propertyKpis.expenses_cents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </Card>
+
+                      {/* Net Revenue */}
+                      <Card className="group relative p-5 bg-gradient-to-br from-blue-50 via-blue-50/50 to-background border-blue-200 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl"></div>
+                        <div className="relative">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="p-2 rounded-lg bg-blue-100 text-blue-700">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                              </svg>
+                            </div>
+                            <div className="p-1.5 rounded-md bg-blue-100/50">
+                              <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                              </svg>
+                            </div>
+                          </div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2">Net Revenue</p>
+                          <p className="text-3xl font-bold text-blue-700 tracking-tight">
+                            ${(((propertyKpis.gross_revenue_cents || 0) - (propertyKpis.expenses_cents || 0)) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </Card>
+
+                      {/* Nights Booked */}
+                      <Card className="group relative p-5 bg-gradient-to-br from-cyan-50 via-cyan-50/50 to-background border-cyan-200 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl"></div>
+                        <div className="relative">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="p-2 rounded-lg bg-cyan-100 text-cyan-700">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                              </svg>
+                            </div>
+                            <div className="p-1.5 rounded-md bg-cyan-100/50">
+                              <svg className="w-4 h-4 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                          </div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2">Nights Booked</p>
+                          <p className="text-3xl font-bold text-cyan-700 tracking-tight">
+                            {(propertyKpis.nights_booked || 0).toLocaleString()}
+                          </p>
+                        </div>
+                      </Card>
+
+                    </div>
+
+                    {/* Secondary Metrics Grid */}
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                      {/* Occupancy Rate */}
+                      <Card className="group relative p-5 bg-gradient-to-br from-purple-50 via-purple-50/50 to-background border-purple-200 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl"></div>
+                        <div className="relative">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="p-2 rounded-lg bg-purple-100 text-purple-700">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                              </svg>
+                            </div>
+                            <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 border-purple-200">
+                              {((propertyKpis.occupancy_rate || 0) * 100).toFixed(1)}%
+                            </Badge>
+                          </div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2">Occupancy Rate</p>
+                          <div className="w-full bg-purple-100 rounded-full h-2.5 overflow-hidden">
+                            <div className="bg-purple-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${((propertyKpis.occupancy_rate || 0) * 100).toFixed(1)}%` }}></div>
+                          </div>
+                        </div>
+                      </Card>
+
+                      {/* Vacancy Rate */}
+                      <Card className="group relative p-5 bg-gradient-to-br from-orange-50 via-orange-50/50 to-background border-orange-200 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl"></div>
+                        <div className="relative">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="p-2 rounded-lg bg-orange-100 text-orange-700">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                              </svg>
+                            </div>
+                            <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 border-orange-200">
+                              {((propertyKpis.vacancy_rate || 0) * 100).toFixed(1)}%
+                            </Badge>
+                          </div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2">Vacancy Rate</p>
+                          <div className="w-full bg-orange-100 rounded-full h-2.5 overflow-hidden">
+                            <div className="bg-orange-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${((propertyKpis.vacancy_rate || 0) * 100).toFixed(1)}%` }}></div>
+                          </div>
+                        </div>
+                      </Card>
+
+                      {/* TruHost Fees */}
+                      <Card className="group relative p-5 bg-gradient-to-br from-slate-50 via-slate-50/50 to-background border-slate-200 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-slate-500/5 rounded-full blur-2xl"></div>
+                        <div className="relative">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="p-2 rounded-lg bg-slate-100 text-slate-700">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                              </svg>
+                            </div>
+                            <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-700 border-slate-200">
+                              {propertyKpis.fee_percent || 12}%
+                            </Badge>
+                          </div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2">TruHost Fees</p>
+                          <p className="text-2xl font-bold text-slate-700 tracking-tight">
+                            ${(((propertyKpis.gross_revenue_cents || 0) * (propertyKpis.fee_percent || 12)) / 10000).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </Card>
+
+                      {/* Properties Count (if aggregate) */}
+                      {propertyKpis.properties && (
+                        <Card className="group relative p-5 bg-gradient-to-br from-indigo-50 via-indigo-50/50 to-background border-indigo-200 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+                          <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl"></div>
+                          <div className="relative">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="p-2 rounded-lg bg-indigo-100 text-indigo-700">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                              </div>
+                            </div>
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Properties</p>
+                            <p className="text-3xl font-bold text-indigo-700 tracking-tight">
+                              {propertyKpis.properties}
+                            </p>
+                          </div>
+                        </Card>
+                      )}
+                    </div>
+                  </>
                 ) : (
                   <div className="text-center py-8">
                     <svg className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2036,6 +2358,8 @@ export default function AdminPage() {
                     </p>
                   </div>
                 )}
+                  </div>
+                </div>
               </div>
             </>
           )}

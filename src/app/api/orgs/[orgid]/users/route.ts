@@ -101,3 +101,41 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<Param
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<Params> }) {
+  try {
+    const { orgid } = await params;
+    const orgId = uuidOf(orgid);
+    if (!orgId) return NextResponse.json({ error: 'Bad org id' }, { status: 400 });
+
+    // Check authentication
+    const sb = await supabaseServer();
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+    const body = await req.json();
+    const { user_id } = body;
+
+    if (!user_id) {
+      return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
+    }
+
+    const admin = supabaseAdmin();
+
+    // Delete org membership (this will cascade delete related data based on DB constraints)
+    const { error: deleteError } = await admin
+      .from('org_memberships')
+      .delete()
+      .eq('org_id', orgId)
+      .eq('user_id', user_id);
+
+    if (deleteError) {
+      return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}

@@ -62,3 +62,140 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ org
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true, booking: data });
 }
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ orgid?: string }> }) {
+  const { orgid } = await params;
+  const orgId = uuidOf(orgid);
+  if (!orgId) return NextResponse.json({ error: 'Bad org id' }, { status: 400 });
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return NextResponse.json({ error: 'Supabase env missing' }, { status: 500 });
+
+  let body: Record<string, unknown> = {};
+  try { body = await req.json(); } catch {}
+  const booking_id = uuidOf(body.booking_id as string);
+  const status = body.status as string;
+
+  if (!booking_id) return NextResponse.json({ error: 'booking_id required' }, { status: 400 });
+  if (!status || !['upcoming', 'completed', 'cancelled'].includes(status)) {
+    return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+  }
+
+  const admin = createClient(url, key);
+
+  // Get the booking details first
+  const { data: booking, error: fetchError } = await admin
+    .from('bookings')
+    .select('*, properties(org_id)')
+    .eq('id', booking_id)
+    .single();
+
+  if (fetchError || !booking) {
+    return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+  }
+
+  // Get the previous status
+  const oldStatus = booking.status;
+
+  // Update the booking status
+  const { error: updateError } = await admin
+    .from('bookings')
+    .update({ status })
+    .eq('id', booking_id);
+
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 400 });
+  }
+
+  // If status changed to "completed", update KPIs
+  if (status === 'completed' && oldStatus !== 'completed') {
+    const checkIn = new Date(booking.check_in);
+    const checkOut = new Date(booking.check_out);
+    const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Get the month from check-in date (YYYY-MM-01)
+    const month = booking.check_in.slice(0, 7) + '-01';
+
+    // Get user_id from user_properties table for this property
+    const { data: userProp } = await admin
+      .from('user_properties')
+      .select('user_id')
+      .eq('property_id', booking.property_id)
+      .single();
+
+    if (userProp?.user_id) {
+      // Check if KPI record exists for this user and month
+      const { data: existingKpi } = await admin
+        .from('kpis')
+        .select('*')
+        .eq('org_id', orgId)
+        .eq('user_id', userProp.user_id)
+        .eq('month', month)
+        .single();
+
+      if (existingKpi) {
+        // Update existing KPI - add nights
+        await admin
+          .from('kpis')
+          .update({
+            nights_booked: (existingKpi.nights_booked || 0) + nights,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingKpi.id);
+      } else {
+        // Create new KPI record
+        await admin
+          .from('kpis')
+          .insert({
+            org_id: orgId,
+            user_id: userProp.user_id,
+            month: month,
+            nights_booked: nights,
+            gross_revenue_cents: 0,
+            expenses_cents: 0,
+            net_revenue_cents: 0,
+            properties: 1,
+            occupancy_rate: 0,
+            vacancy_rate: 0
+          });
+      }
+    }
+  }
+
+  // If status changed from "completed" to something else, subtract the nights
+  if (oldStatus === 'completed' && status !== 'completed') {
+    const checkIn = new Date(booking.check_in);
+    const checkOut = new Date(booking.check_out);
+    const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+
+    const month = booking.check_in.slice(0, 7) + '-01';
+
+    const { data: userProp } = await admin
+      .from('user_properties')
+      .select('user_id')
+      .eq('property_id', booking.property_id)
+      .single();
+
+    if (userProp?.user_id) {
+      const { data: existingKpi } = await admin
+        .from('kpis')
+        .select('*')
+        .eq('org_id', orgId)
+        .eq('user_id', userProp.user_id)
+        .eq('month', month)
+        .single();
+
+      if (existingKpi) {
+        await admin
+          .from('kpis')
+          .update({
+            nights_booked: Math.max(0, (existingKpi.nights_booked || 0) - nights),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingKpi.id);
+      }
+    }
+  }
+
+  return NextResponse.json({ ok: true });
+}

@@ -29,27 +29,49 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ org
   if (propertiesError) return NextResponse.json({ error: propertiesError.message }, { status: 400 });
 
   // Then, get all user_properties relationships
-  const { data: userPropertiesData } = await admin
+  const { data: userPropertiesData, error: upError } = await admin
     .from('user_properties')
-    .select(`
-      property_id,
-      users (
-        id,
-        first_name,
-        last_name,
-        email
-      )
-    `);
+    .select('property_id, user_id');
+
+  console.log('User properties data:', userPropertiesData, 'Error:', upError);
+
+  // Get user IDs
+  const userIds = (userPropertiesData ?? []).map((up: any) => up.user_id);
+
+  // Get profiles for those users
+  const { data: profilesData } = userIds.length > 0
+    ? await admin
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', userIds)
+    : { data: [] };
+
+  console.log('Profiles data:', profilesData);
+
+  // Create a map of user_id to profile
+  const userProfileMap = new Map();
+  if (profilesData) {
+    profilesData.forEach((profile: any) => {
+      userProfileMap.set(profile.id, profile);
+    });
+  }
 
   // Create a map of property_id to user
   const propertyUserMap = new Map();
   if (userPropertiesData) {
     userPropertiesData.forEach((up: any) => {
-      if (up.users) {
-        propertyUserMap.set(up.property_id, up.users);
+      const profile = userProfileMap.get(up.user_id);
+      if (profile) {
+        propertyUserMap.set(up.property_id, {
+          id: up.user_id,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        });
       }
     });
   }
+
+  console.log('Property user map:', propertyUserMap);
 
   // Combine the data
   const properties = (propertiesData ?? []).map((prop: any) => {
@@ -64,8 +86,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ org
       assigned_user: user ? {
         id: user.id,
         first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email
+        last_name: user.last_name
       } : null
     };
   });
