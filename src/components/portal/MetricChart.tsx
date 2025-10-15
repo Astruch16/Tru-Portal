@@ -439,11 +439,11 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
               </div>
 
               {/* Featured Metric Card */}
-              <Card className="shadow-lg bg-white" style={{ border: `2px solid ${config.color}` }}>
+              <Card className="shadow-lg bg-white" style={{ border: '2px solid #9db896' }}>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${config.color}20` }}>
-                      <svg className="w-5 h-5" style={{ color: config.color }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#9db896]/20">
+                      <svg className="w-5 h-5 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={config.iconPath} />
                       </svg>
                     </div>
@@ -459,7 +459,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-5xl font-bold mb-2" style={{ color: config.color }}>
+                  <div className="text-5xl font-bold mb-2 text-[#88a882]">
                     {viewMode === 'monthly'
                       ? config.format(selectedValue)
                       : config.format(annualData?.total || 0)}
@@ -494,11 +494,11 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   ) : (
                     <ResponsiveContainer width="100%" height={450}>
                       {viewMode === 'monthly' ? (
-                        <BarChart data={dailyChartData} margin={{ top: 10, right: 30, left: 20, bottom: 40 }}>
+                        <LineChart data={dailyChartData} margin={{ top: 10, right: 30, left: 20, bottom: 40 }}>
                           <defs>
-                            <linearGradient id={`gradient-${metricType}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor={config.gradientStart} stopOpacity={0.8} />
-                              <stop offset="95%" stopColor={config.gradientEnd} stopOpacity={0.4} />
+                            <linearGradient id={`gradient-monthly-${metricType}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#9db896" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="#9db896" stopOpacity={0.05} />
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
@@ -527,7 +527,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                           <Tooltip
                             contentStyle={{
                               background: 'white',
-                              border: '2px solid #e5e7eb',
+                              border: '2px solid #E1ECDB',
                               borderRadius: 12,
                               padding: 16,
                               boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
@@ -546,20 +546,22 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                               ];
                             }}
                           />
-                          <Bar
+                          <Line
+                            type="monotone"
                             dataKey="value"
-                            fill={`url(#gradient-${metricType})`}
-                            stroke={config.color}
-                            strokeWidth={1}
-                            radius={[4, 4, 0, 0]}
+                            stroke="#9db896"
+                            strokeWidth={3}
+                            fill={`url(#gradient-monthly-${metricType})`}
+                            dot={{ fill: '#9db896', r: 4, strokeWidth: 2, stroke: 'white' }}
+                            activeDot={{ r: 6, strokeWidth: 2, stroke: 'white', fill: '#9db896' }}
                           />
-                        </BarChart>
+                        </LineChart>
                       ) : (
                         <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 60 }}>
                           <defs>
-                            <linearGradient id={`gradient-${metricType}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor={config.gradientStart} stopOpacity={0.3} />
-                              <stop offset="95%" stopColor={config.gradientEnd} stopOpacity={0.05} />
+                            <linearGradient id={`gradient-annual-${metricType}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#9db896" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="#9db896" stopOpacity={0.05} />
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
@@ -589,7 +591,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                           <Tooltip
                             contentStyle={{
                               background: 'white',
-                              border: '2px solid #e5e7eb',
+                              border: '2px solid #E1ECDB',
                               borderRadius: 12,
                               padding: 16,
                               boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
@@ -600,11 +602,11 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                           <Area
                             type="monotone"
                             dataKey="value"
-                            stroke={config.color}
+                            stroke="#9db896"
                             strokeWidth={3}
-                            fill={`url(#gradient-${metricType})`}
-                            dot={{ fill: config.color, r: 5, strokeWidth: 2, stroke: 'white' }}
-                            activeDot={{ r: 7, strokeWidth: 2, stroke: 'white' }}
+                            fill={`url(#gradient-annual-${metricType})`}
+                            dot={{ fill: '#9db896', r: 5, strokeWidth: 2, stroke: 'white' }}
+                            activeDot={{ r: 7, strokeWidth: 2, stroke: 'white', fill: '#9db896' }}
                           />
                         </AreaChart>
                       )}
@@ -724,7 +726,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                       </div>
                       <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Latest</div>
                     </div>
-                    <div className="text-2xl font-bold" style={{ color: config.color }}>
+                    <div className="text-2xl font-bold text-[#88a882]">
                       {config.format(chartData[chartData.length - 1]?.value || 0)}
                     </div>
                     <Badge variant="secondary" className="mt-2 bg-[#E1ECDB]/30 text-[#88a882] border-[#E1ECDB]">Most Recent</Badge>
@@ -825,7 +827,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                               </div>
                             </div>
                             <div className="flex items-center gap-3">
-                              <div className="text-xl font-bold" style={{ color: config.color }}>
+                              <div className="text-xl font-bold text-[#88a882]">
                                 {config.format(value)}
                               </div>
                               {isMax && <Badge className="bg-green-600 hover:bg-green-700">Peak</Badge>}
