@@ -792,140 +792,155 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
               {/* Detailed Monthly Breakdown */}
               {viewMode === 'annual' && (
                 <Card className="shadow-lg bg-white" style={{ border: '1px solid #E1ECDB' }}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          <svg className="w-5 h-5 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                          </svg>
-                          Monthly Breakdown
-                        </CardTitle>
-                        <CardDescription>Detailed performance by month ({kpis.length} months)</CardDescription>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {/* Sort Options */}
-                        <div className="flex items-center gap-2 bg-[#F8F6F2] rounded-lg p-1 border border-[#E1ECDB]">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setSortOrder('chronological')}
-                            className={`h-8 px-3 text-xs transition-all ${
-                              sortOrder === 'chronological'
-                                ? 'bg-[#9db896] text-white hover:bg-[#88a882]'
-                                : 'text-gray-600 hover:bg-[#E1ECDB]/30'
-                            }`}
-                          >
-                            <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  {/* Header - Always Visible */}
+                  <button
+                    onClick={() => setIsBreakdownExpanded(!isBreakdownExpanded)}
+                    className="w-full text-left"
+                  >
+                    <CardHeader className="hover:bg-[#E1ECDB]/10 transition-colors cursor-pointer">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <svg className="w-5 h-5 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                             </svg>
-                            Date
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setSortOrder('peak')}
-                            className={`h-8 px-3 text-xs transition-all ${
-                              sortOrder === 'peak'
-                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                : 'text-gray-600 hover:bg-[#E1ECDB]/30'
-                            }`}
-                          >
-                            <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                            </svg>
-                            Peak
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setSortOrder('low')}
-                            className={`h-8 px-3 text-xs transition-all ${
-                              sortOrder === 'low'
-                                ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                                : 'text-gray-600 hover:bg-[#E1ECDB]/30'
-                            }`}
-                          >
-                            <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-                            </svg>
-                            Low
-                          </Button>
+                            Monthly Breakdown
+                          </CardTitle>
+                          <CardDescription>Detailed performance by month ({kpis.length} months)</CardDescription>
                         </div>
-                        {/* Collapse Toggle */}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setIsBreakdownExpanded(!isBreakdownExpanded)}
-                          className="h-8 w-8 p-0 hover:bg-[#E1ECDB]/30"
-                        >
-                          <svg
-                            className={`w-5 h-5 text-[#9db896] transition-transform ${isBreakdownExpanded ? 'rotate-180' : ''}`}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          {/* Collapse Toggle */}
+                          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
+                            <span className="text-xs font-medium text-gray-600">
+                              {isBreakdownExpanded ? 'Hide' : 'Show'}
+                            </span>
+                            <svg
+                              className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isBreakdownExpanded ? 'rotate-180' : ''}`}
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
+                    </CardHeader>
+                  </button>
+
+                  {/* Content - Collapsible */}
                   {isBreakdownExpanded && (
-                    <CardContent>
-                      <div className="space-y-3 max-h-96 overflow-y-auto">
-                        {(() => {
-                          let sortedKpis = [...kpis];
+                    <>
+                      {/* Sort Options Bar */}
+                      <div className="px-6 pb-4 border-b border-[#E1ECDB]">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-gray-600 mr-2">Sort by:</span>
+                          <div className="flex items-center gap-2 bg-[#F8F6F2] rounded-lg p-1 border border-[#E1ECDB]">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setSortOrder('chronological')}
+                              className={`h-8 px-3 text-xs transition-all ${
+                                sortOrder === 'chronological'
+                                  ? 'bg-[#9db896] text-white hover:bg-[#88a882]'
+                                  : 'text-gray-600 hover:bg-[#E1ECDB]/30'
+                              }`}
+                            >
+                              <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              Date
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setSortOrder('peak')}
+                              className={`h-8 px-3 text-xs transition-all ${
+                                sortOrder === 'peak'
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  : 'text-gray-600 hover:bg-[#E1ECDB]/30'
+                              }`}
+                            >
+                              <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                              </svg>
+                              Peak
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setSortOrder('low')}
+                              className={`h-8 px-3 text-xs transition-all ${
+                                sortOrder === 'low'
+                                  ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                                  : 'text-gray-600 hover:bg-[#E1ECDB]/30'
+                              }`}
+                            >
+                              <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                              </svg>
+                              Low
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
 
-                          if (sortOrder === 'peak') {
-                            // Sort by value descending (highest first)
-                            sortedKpis.sort((a, b) => (b[config.dataKey] as number) - (a[config.dataKey] as number));
-                          } else if (sortOrder === 'low') {
-                            // Sort by value ascending (lowest first)
-                            sortedKpis.sort((a, b) => (a[config.dataKey] as number) - (b[config.dataKey] as number));
-                          } else {
-                            // Chronological (most recent first)
-                            sortedKpis = sortedKpis.slice().reverse();
-                          }
+                      {/* Month List */}
+                      <CardContent>
+                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                          {(() => {
+                            let sortedKpis = [...kpis];
 
-                          return sortedKpis.map((kpi, idx) => {
-                            const value = kpi[config.dataKey] as number;
-                            const isMax = value === Math.max(...kpis.map(k => k[config.dataKey] as number));
-                            const isMin = value === Math.min(...kpis.map(k => k[config.dataKey] as number));
+                            if (sortOrder === 'peak') {
+                              // Sort by value descending (highest first)
+                              sortedKpis.sort((a, b) => (b[config.dataKey] as number) - (a[config.dataKey] as number));
+                            } else if (sortOrder === 'low') {
+                              // Sort by value ascending (lowest first)
+                              sortedKpis.sort((a, b) => (a[config.dataKey] as number) - (b[config.dataKey] as number));
+                            } else {
+                              // Chronological (most recent first)
+                              sortedKpis = sortedKpis.slice().reverse();
+                            }
 
-                            // Parse month without timezone issues
-                            const [year, monthNum] = kpi.month.split('-').map(Number);
-                            const monthLabel = format(new Date(year, monthNum - 1, 1), 'MMMM yyyy');
+                            return sortedKpis.map((kpi, idx) => {
+                              const value = kpi[config.dataKey] as number;
+                              const isMax = value === Math.max(...kpis.map(k => k[config.dataKey] as number));
+                              const isMin = value === Math.min(...kpis.map(k => k[config.dataKey] as number));
 
-                            return (
-                              <div
-                                key={kpi.month}
-                                className="flex items-center justify-between p-4 bg-[#F8F6F2] hover:bg-[#E1ECDB]/20 rounded-lg transition-colors"
-                                style={{ border: '1px solid #E1ECDB' }}
-                              >
-                                <div className="flex items-center gap-4">
-                                  <div className="text-2xl font-bold text-gray-400 w-8">
-                                    #{idx + 1}
-                                  </div>
-                                  <div>
-                                    <div className="font-semibold text-gray-900">
-                                      {monthLabel}
+                              // Parse month without timezone issues
+                              const [year, monthNum] = kpi.month.split('-').map(Number);
+                              const monthLabel = format(new Date(year, monthNum - 1, 1), 'MMMM yyyy');
+
+                              return (
+                                <div
+                                  key={kpi.month}
+                                  className="flex items-center justify-between p-4 bg-[#F8F6F2] hover:bg-[#E1ECDB]/20 rounded-lg transition-colors"
+                                  style={{ border: '1px solid #E1ECDB' }}
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <div className="text-2xl font-bold text-gray-400 w-8">
+                                      #{idx + 1}
+                                    </div>
+                                    <div>
+                                      <div className="font-semibold text-gray-900">
+                                        {monthLabel}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <div className="text-xl font-bold text-[#88a882]">
-                                    {config.format(value)}
+                                  <div className="flex items-center gap-3">
+                                    <div className="text-xl font-bold text-[#88a882]">
+                                      {config.format(value)}
+                                    </div>
+                                    {isMax && <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">Peak</Badge>}
+                                    {isMin && <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">Low</Badge>}
                                   </div>
-                                  {isMax && <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">Peak</Badge>}
-                                  {isMin && <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">Low</Badge>}
                                 </div>
-                              </div>
-                            );
-                          });
-                        })()}
-                      </div>
-                    </CardContent>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </CardContent>
+                    </>
                   )}
                 </Card>
               )}
