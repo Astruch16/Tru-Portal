@@ -830,11 +830,12 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
 
                   {/* Content - Collapsible */}
                   <div
-                    className={`overflow-hidden transition-all duration-500 ease-in-out ${
-                      isBreakdownExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
-                    }`}
+                    className="overflow-hidden transition-all duration-700 ease-in-out"
+                    style={{
+                      maxHeight: isBreakdownExpanded ? '800px' : '0px',
+                      opacity: isBreakdownExpanded ? 1 : 0,
+                    }}
                   >
-                    <>
                       {/* Sort Options Bar */}
                       <div className="px-6 py-4 border-b border-[#E1ECDB]">
                         <div className="flex items-center gap-2">
@@ -937,7 +938,6 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                           })()}
                         </div>
                       </CardContent>
-                    </>
                   </div>
                 </Card>
               )}
