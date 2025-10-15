@@ -829,7 +829,11 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   </button>
 
                   {/* Content - Collapsible */}
-                  {isBreakdownExpanded && (
+                  <div
+                    className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                      isBreakdownExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+                    }`}
+                  >
                     <>
                       {/* Sort Options Bar */}
                       <div className="px-6 py-4 border-b border-[#E1ECDB]">
@@ -934,7 +938,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                         </div>
                       </CardContent>
                     </>
-                  )}
+                  </div>
                 </Card>
               )}
             </>
