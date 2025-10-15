@@ -46,35 +46,68 @@ export async function GET(
       return NextResponse.json({ error: 'Property not found' }, { status: 404 });
     }
 
-    // Get bookings for this property and month
-    const startDate = new Date(month);
-    const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+    // Get the organization's plan to calculate TruHost fees
+    const { data: plan } = await admin
+      .from('plans')
+      .select('percent')
+      .eq('org_id', orgId)
+      .lte('effective_date', month)
+      .order('effective_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    const { data: bookings, error: bookingsError } = await admin
-      .from('bookings')
-      .select('gross_revenue_cents, expenses_cents, nights, check_in, check_out')
+    const feePercent = plan?.percent ?? 12; // Default to 12% if no plan
+
+    // Get ledger entries for this property and month
+    const { data: ledgerEntries, error: ledgerError } = await admin
+      .from('ledger_entries')
+      .select('amount_cents')
       .eq('property_id', propertyId)
-      .gte('check_in', startDate.toISOString().split('T')[0])
-      .lte('check_in', endDate.toISOString().split('T')[0]);
+      .gte('entry_date', monthParam + '-01')
+      .lt('entry_date', new Date(new Date(month).getFullYear(), new Date(month).getMonth() + 1, 1).toISOString().split('T')[0]);
 
-    if (bookingsError) {
-      return NextResponse.json({ error: bookingsError.message }, { status: 400 });
+    if (ledgerError) {
+      return NextResponse.json({ error: ledgerError.message }, { status: 400 });
     }
 
-    // Calculate KPIs from bookings
+    // Calculate revenue and expenses from ledger entries
     let grossRevenueCents = 0;
     let expensesCents = 0;
-    let nightsBooked = 0;
 
-    (bookings || []).forEach((booking) => {
-      grossRevenueCents += booking.gross_revenue_cents || 0;
-      expensesCents += booking.expenses_cents || 0;
-      nightsBooked += booking.nights || 0;
+    (ledgerEntries || []).forEach((entry) => {
+      if (entry.amount_cents > 0) {
+        grossRevenueCents += entry.amount_cents;
+      } else {
+        expensesCents += Math.abs(entry.amount_cents);
+      }
     });
 
-    const netRevenueCents = grossRevenueCents - expensesCents;
+    // Get bookings for nights calculation
+    const { data: bookings } = await admin
+      .from('bookings')
+      .select('check_in, check_out')
+      .eq('property_id', propertyId)
+      .eq('status', 'completed')
+      .gte('check_in', monthParam + '-01')
+      .lt('check_in', new Date(new Date(month).getFullYear(), new Date(month).getMonth() + 1, 1).toISOString().split('T')[0]);
 
-    // Calculate occupancy rate (assuming 30 days per month for simplicity)
+    let nightsBooked = 0;
+    (bookings || []).forEach((booking) => {
+      const checkIn = new Date(booking.check_in);
+      const checkOut = new Date(booking.check_out);
+      const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+      nightsBooked += nights;
+    });
+
+    // Calculate TruHost fees
+    const truHostFees = Math.floor((grossRevenueCents * feePercent) / 100);
+
+    // Calculate net revenue: Gross - Expenses - TruHost Fees
+    const netRevenueCents = grossRevenueCents - expensesCents - truHostFees;
+
+    // Calculate occupancy rate (days in month)
+    const startDate = new Date(month);
+    const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
     const daysInMonth = endDate.getDate();
     const occupancyRate = nightsBooked / daysInMonth;
     const vacancyRate = 1 - occupancyRate;
@@ -91,6 +124,7 @@ export async function GET(
       properties: 1,
       occupancy_rate: occupancyRate,
       vacancy_rate: vacancyRate,
+      fee_percent: feePercent,
     };
 
     return NextResponse.json({ ok: true, kpi });

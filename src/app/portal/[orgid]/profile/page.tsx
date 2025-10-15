@@ -156,6 +156,35 @@ export default function ProfilePage() {
     setUploading(false);
   }
 
+  async function handleDeleteAvatar() {
+    if (!confirm('Are you sure you want to delete your profile picture?')) return;
+
+    setUploading(true);
+
+    try {
+      const res = await fetch('/api/profile/avatar', {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setProfile(prev => prev ? { ...prev, avatar_url: null } : null);
+        setMessage('Avatar deleted successfully!');
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        setMessage(`Failed to delete avatar: ${data.error || 'Unknown error'}`);
+        setTimeout(() => setMessage(''), 5000);
+      }
+    } catch (error) {
+      console.error('Avatar delete exception:', error);
+      setMessage('Failed to delete avatar: Network error');
+      setTimeout(() => setMessage(''), 5000);
+    }
+
+    setUploading(false);
+  }
+
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -319,10 +348,27 @@ export default function ProfilePage() {
               <CardDescription>Upload your avatar</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center space-y-4">
-              <Avatar className="w-32 h-32 border-4 border-primary/20">
-                <AvatarImage src={profile?.avatar_url || undefined} />
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary">{initials}</AvatarFallback>
-              </Avatar>
+              <div className="relative group">
+                <Avatar className="w-32 h-32 border-4 border-primary/20">
+                  <AvatarImage src={profile?.avatar_url || undefined} />
+                  <AvatarFallback className="text-2xl bg-primary/10 text-primary">{initials}</AvatarFallback>
+                </Avatar>
+                {/* Delete overlay on hover - only show if avatar exists */}
+                {profile?.avatar_url && (
+                  <div className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center cursor-pointer">
+                    <button
+                      onClick={handleDeleteAvatar}
+                      disabled={uploading}
+                      className="p-3 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      title="Delete avatar"
+                    >
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
               <div className="w-full">
                 <label
                   htmlFor="avatar-upload"

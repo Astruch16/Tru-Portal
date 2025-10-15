@@ -74,6 +74,29 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: updateError.message }, { status: 400 });
       }
 
+      // Recalculate all KPIs for this user with the new plan percentage
+      const { data: kpis } = await admin
+        .from('kpis')
+        .select('id, gross_revenue_cents, expenses_cents')
+        .eq('org_id', orgId)
+        .eq('user_id', userId);
+
+      if (kpis && kpis.length > 0) {
+        for (const kpi of kpis) {
+          const truHostFees = Math.floor((kpi.gross_revenue_cents * percent) / 100);
+          const newNetRevenue = kpi.gross_revenue_cents - kpi.expenses_cents - truHostFees;
+
+          await admin
+            .from('kpis')
+            .update({
+              net_revenue_cents: newNetRevenue,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', kpi.id);
+        }
+        console.log(`Recalculated ${kpis.length} KPI records for user`);
+      }
+
       return NextResponse.json({ ok: true, message: 'Plan updated successfully', action: 'updated' });
     } else {
       // Create new plan

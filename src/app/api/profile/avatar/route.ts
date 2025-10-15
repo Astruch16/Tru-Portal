@@ -121,3 +121,73 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    console.log('=== Avatar Delete API Called ===');
+
+    // Get authenticated user
+    console.log('Getting authenticated user...');
+    const sb = await supabaseServer();
+    const { data: { user }, error: userError } = await sb.auth.getUser();
+
+    if (userError || !user) {
+      console.log('Authentication failed:', userError);
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    console.log('User authenticated:', user.id);
+    const userId = user.id;
+    const admin = supabaseAdmin();
+
+    // Get current avatar
+    console.log('Checking for existing avatar...');
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('avatar_url')
+      .eq('id', userId)
+      .single();
+
+    if (!profile?.avatar_url) {
+      console.log('No avatar found to delete');
+      return NextResponse.json({ error: 'No avatar to delete' }, { status: 404 });
+    }
+
+    console.log('Found existing avatar:', profile.avatar_url);
+
+    // Extract path from URL and delete from storage
+    const oldPath = profile.avatar_url.split('/').pop();
+    if (oldPath) {
+      console.log('Deleting avatar from storage:', `${userId}/${oldPath}`);
+      const { error: deleteError } = await admin.storage
+        .from('avatars')
+        .remove([`${userId}/${oldPath}`]);
+
+      if (deleteError) {
+        console.log('Storage delete error:', deleteError);
+        // Continue anyway to remove from profile
+      }
+    }
+
+    // Update profile to remove avatar URL
+    console.log('Updating profile to remove avatar URL...');
+    const { error: updateError } = await admin
+      .from('profiles')
+      .update({
+        avatar_url: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.log('Profile update error:', updateError);
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    console.log('Avatar deleted successfully!');
+    return NextResponse.json({ success: true, message: 'Avatar deleted successfully' });
+  } catch (error) {
+    console.error('Avatar delete error:', error);
+    return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
+  }
+}

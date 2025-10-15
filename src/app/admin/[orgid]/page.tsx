@@ -77,6 +77,8 @@ export default function AdminPage() {
 
   // --- Invoice list state ---
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [invoiceFilterMonth, setInvoiceFilterMonth] = useState<string>('all');
+  const [invoiceGroupBy, setInvoiceGroupBy] = useState<'month' | 'property'>('month');
 
   // --- Revenue/Expense state ---
   const [ledgerPropertyId, setLedgerPropertyId] = useState('');
@@ -85,6 +87,9 @@ export default function AdminPage() {
   const [ledgerDate, setLedgerDate] = useState(new Date().toISOString().slice(0, 10));
   const [ledgerCategory, setLedgerCategory] = useState<'revenue' | 'expense'>('revenue');
   const [busyLedger, setBusyLedger] = useState(false);
+  const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
+  const [ledgerGroupBy, setLedgerGroupBy] = useState<'month' | 'property'>('month');
+  const [ledgerFilterMonth, setLedgerFilterMonth] = useState<string>('all');
 
   // --- Receipt state ---
   const [receiptPropertyId, setReceiptPropertyId] = useState('');
@@ -211,6 +216,7 @@ export default function AdminPage() {
       fetchUsers();
       fetchBookings();
       fetchInvoices();
+      fetchLedgerEntries();
     }
   }, [orgId]);
 
@@ -288,6 +294,20 @@ export default function AdminPage() {
       if (res.ok) setInvoices(j.invoices || []);
     } catch (e) {
       console.error('Failed to fetch invoices:', e);
+    }
+  }
+
+  async function fetchLedgerEntries() {
+    try {
+      const res = await fetch(`/api/orgs/${orgId}/ledger?admin=true`);
+      const j = await res.json();
+      console.log('Fetched ledger entries:', j);
+      if (res.ok) {
+        setLedgerEntries(j.entries || []);
+        console.log('Set ledger entries state:', j.entries || []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch ledger entries:', e);
     }
   }
 
@@ -446,17 +466,40 @@ export default function AdminPage() {
     }
   }
 
+  async function deleteBooking(bookingId: string) {
+    if (!confirm('Are you sure you want to delete this booking? This action cannot be undone.')) return;
+
+    try {
+      const res = await fetch(`/api/orgs/${orgId}/bookings`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking_id: bookingId }),
+      });
+      if (res.ok) {
+        setMsg('✓ Booking deleted successfully');
+        fetchBookings();
+      } else {
+        const j = await res.json();
+        setMsg(`Error: ${j.error}`);
+      }
+    } catch (e) {
+      setMsg(`Network error: ${(e as Error).message}`);
+    }
+  }
+
   // --- Ledger actions ---
   async function addLedgerEntry() {
     if (!ledgerPropertyId || !ledgerAmount || !ledgerDescription) {
       setMsg('Please fill in all fields for revenue/expense');
       return;
     }
-    const amountCents = parseInt(ledgerAmount, 10);
-    if (!Number.isFinite(amountCents)) {
-      setMsg('Amount must be a valid number');
+    // Convert dollars to cents
+    const amountDollars = parseFloat(ledgerAmount);
+    if (!Number.isFinite(amountDollars) || amountDollars < 0) {
+      setMsg('Amount must be a valid positive number');
       return;
     }
+    const amountCents = Math.round(amountDollars * 100);
     setBusyLedger(true); setMsg('Adding entry…');
     try {
       const res = await fetch(`/api/orgs/${orgId}/ledger`, {
@@ -464,9 +507,10 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           property_id: ledgerPropertyId,
-          amount_cents: ledgerCategory === 'revenue' ? amountCents : -amountCents,
+          amount_cents: amountCents,
           description: ledgerDescription,
           entry_date: ledgerDate,
+          kind: ledgerCategory,
           category: ledgerCategory,
         }),
       });
@@ -476,6 +520,7 @@ export default function AdminPage() {
         setLedgerPropertyId('');
         setLedgerAmount('');
         setLedgerDescription('');
+        fetchLedgerEntries();
       } else {
         setMsg(`Error: ${j.error || 'Failed to add entry'}`);
       }
@@ -483,6 +528,26 @@ export default function AdminPage() {
       setMsg(`Network error: ${(e as Error).message}`);
     } finally {
       setBusyLedger(false);
+    }
+  }
+
+  async function deleteLedgerEntry(entryId: string) {
+    if (!confirm('Are you sure you want to delete this entry? This will update the KPIs.')) return;
+    try {
+      const res = await fetch(`/api/orgs/${orgId}/ledger`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entry_id: entryId }),
+      });
+      const j = await res.json();
+      if (res.ok) {
+        setMsg('✓ Entry deleted successfully');
+        fetchLedgerEntries();
+      } else {
+        setMsg(`Error: ${j.error || 'Failed to delete entry'}`);
+      }
+    } catch (e) {
+      setMsg(`Network error: ${(e as Error).message}`);
     }
   }
 
@@ -1014,7 +1079,7 @@ export default function AdminPage() {
                           <div className="relative p-5">
                             {/* Property Icon & Name */}
                             <div className="flex items-start gap-3 mb-3">
-                              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center group-hover:scale-105 transition-transform duration-200 ease-out">
+                              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
                                 {getPropertyIcon(prop.property_type)}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -1304,9 +1369,12 @@ export default function AdminPage() {
                           className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
                         >
                           <option value="all">All Months</option>
-                          {Array.from(new Set(bookings.map(b => new Date(b.check_in).toISOString().slice(0, 7)))).sort().reverse().map(month => (
+                          {Array.from(new Set(bookings.map(b => b.check_in.slice(0, 7)))).sort().reverse().map(month => (
                             <option key={month} value={month}>
-                              {new Date(month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                              {(() => {
+                                const [year, monthNum] = month.split('-').map(Number);
+                                return new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                              })()}
                             </option>
                           ))}
                         </select>
@@ -1357,7 +1425,10 @@ export default function AdminPage() {
                         )}
                         {bookingFilterMonth !== 'all' && (
                           <Badge variant="secondary" className="text-xs">
-                            Month: {new Date(bookingFilterMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            Month: {(() => {
+                              const [year, monthNum] = bookingFilterMonth.split('-').map(Number);
+                              return new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                            })()}
                             <button
                               onClick={() => setBookingFilterMonth('all')}
                               className="ml-1 hover:text-destructive"
@@ -1398,9 +1469,9 @@ export default function AdminPage() {
 
                       // Apply sorting
                       if (bookingSortBy === 'date-asc') {
-                        filteredBookings.sort((a, b) => new Date(a.check_in).getTime() - new Date(b.check_in).getTime());
+                        filteredBookings.sort((a, b) => a.check_in.localeCompare(b.check_in));
                       } else if (bookingSortBy === 'date-desc') {
-                        filteredBookings.sort((a, b) => new Date(b.check_in).getTime() - new Date(a.check_in).getTime());
+                        filteredBookings.sort((a, b) => b.check_in.localeCompare(a.check_in));
                       }
 
                       // Group by property
@@ -1434,6 +1505,18 @@ export default function AdminPage() {
                                   'bg-red-500'
                                 }`}></div>
 
+                                {/* Delete button */}
+                                <button
+                                  onClick={() => deleteBooking(booking.id)}
+                                  className="absolute top-3 right-3 p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all duration-200 cursor-pointer opacity-0 group-hover:opacity-100"
+                                  aria-label="Delete booking"
+                                  title="Delete booking"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+
                                 <div className="p-4 space-y-3">
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="flex-1">
@@ -1444,7 +1527,11 @@ export default function AdminPage() {
                                         Check-in
                                       </div>
                                       <p className="text-sm font-medium text-foreground">
-                                        {new Date(booking.check_in).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        {(() => {
+                                          // Parse YYYY-MM-DD without timezone conversion
+                                          const [year, month, day] = booking.check_in.split('-').map(Number);
+                                          return new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                        })()}
                                       </p>
                                     </div>
                                     <Badge
@@ -1467,7 +1554,11 @@ export default function AdminPage() {
                                       Check-out
                                     </div>
                                     <p className="text-sm font-medium text-foreground">
-                                      {new Date(booking.check_out).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                      {(() => {
+                                        // Parse YYYY-MM-DD without timezone conversion
+                                        const [year, month, day] = booking.check_out.split('-').map(Number);
+                                        return new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                      })()}
                                     </p>
                                   </div>
 
@@ -1544,43 +1635,167 @@ export default function AdminPage() {
 
               {/* All Invoices */}
               <div>
-                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  All Invoices
-                </h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium flex items-center gap-2">
+                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    All Invoices
+                    <Badge variant="outline" className="text-xs">
+                      {invoices.length} total
+                    </Badge>
+                  </h3>
+                  {/* Group By Toggle & Month Filter */}
+                  {invoices.length > 0 && (
+                    <div className="flex items-center gap-3 text-xs">
+                      {/* Group By Toggle */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Group by:</span>
+                        <div className="flex rounded-md border border-border bg-background overflow-hidden">
+                          <button
+                            onClick={() => setInvoiceGroupBy('month')}
+                            className={`px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                              invoiceGroupBy === 'month'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-background text-muted-foreground hover:bg-muted'
+                            }`}
+                          >
+                            Month
+                          </button>
+                          <button
+                            onClick={() => setInvoiceGroupBy('property')}
+                            className={`px-3 py-1 text-xs font-medium transition-colors cursor-pointer border-l border-border ${
+                              invoiceGroupBy === 'property'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-background text-muted-foreground hover:bg-muted'
+                            }`}
+                          >
+                            Property
+                          </button>
+                        </div>
+                      </div>
+                      {/* Month Filter */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Filter:</span>
+                        <select
+                          value={invoiceFilterMonth}
+                          onChange={(e) => setInvoiceFilterMonth(e.target.value)}
+                          className="h-8 rounded-md border border-border bg-background px-2 text-xs shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
+                        >
+                          <option value="all">All Months</option>
+                          {(() => {
+                            const months = new Set<string>();
+                            invoices.forEach(invoice => {
+                              const month = invoice.bill_month?.slice(0, 7);
+                              if (month) months.add(month);
+                            });
+                            return Array.from(months).sort().reverse().map(month => {
+                              const [year, monthNum] = month.split('-').map(Number);
+                              const label = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                              return <option key={month} value={month}>{label}</option>;
+                            });
+                          })()}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 {invoices.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No invoices yet.</p>
                 ) : (
-                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                    {invoices.map((invoice) => (
-                      <Card key={invoice.id} className="p-4 border-border/50 bg-card/80 backdrop-blur-sm">
-                        <div className="space-y-2">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h4 className="font-medium text-sm">{invoice.invoice_number || 'Invoice'}</h4>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(invoice.bill_month).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
-                              </p>
+                  <div className="space-y-4">
+                    {(() => {
+                      // Filter invoices by selected month
+                      const filteredInvoices = invoiceFilterMonth === 'all'
+                        ? invoices
+                        : invoices.filter(invoice => invoice.bill_month?.slice(0, 7) === invoiceFilterMonth);
+
+                      // Group invoices by month or property
+                      const grouped = filteredInvoices.reduce((acc: Record<string, any[]>, invoice) => {
+                        const key = invoiceGroupBy === 'month'
+                          ? invoice.bill_month?.slice(0, 7) || 'no-date'
+                          : invoice.org_id || 'no-property';
+                        if (!acc[key]) acc[key] = [];
+                        acc[key].push(invoice);
+                        return acc;
+                      }, {});
+
+                      return Object.entries(grouped).map(([key, groupInvoices]) => {
+                        // Determine label based on grouping
+                        let groupLabel = '';
+                        let groupIcon = null;
+                        if (invoiceGroupBy === 'month') {
+                          const [year, monthNum] = key.split('-').map(Number);
+                          groupLabel = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                          groupIcon = (
+                            <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          );
+                        } else {
+                          groupLabel = org?.name || 'Organization';
+                          groupIcon = (
+                            <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                          );
+                        }
+
+                        const totalDue = groupInvoices.reduce((sum, inv) => sum + (inv.amount_due_cents || 0), 0);
+                        const paidCount = groupInvoices.filter(inv => inv.status === 'paid').length;
+
+                        return (
+                          <div key={key} className="border border-border/50 rounded-lg p-4 bg-gradient-to-r from-muted/20 to-muted/10">
+                            {/* Group Header */}
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                {groupIcon}
+                                {groupLabel}
+                                <Badge variant="outline" className="text-xs ml-1">{groupInvoices.length}</Badge>
+                              </h4>
+                              <div className="flex items-center gap-3 text-xs">
+                                <span className="text-muted-foreground">{paidCount} paid / {groupInvoices.length} total</span>
+                                <span className="font-medium">${(totalDue / 100).toFixed(2)}</span>
+                              </div>
                             </div>
-                            <Badge
-                              variant={invoice.status === 'paid' ? 'default' : 'outline'}
-                              className={
-                                invoice.status === 'paid'
-                                  ? 'bg-primary/20 text-primary border-primary'
-                                  : 'bg-red-500/10 text-red-600 border-red-500/50'
-                              }
-                            >
-                              {invoice.status === 'paid' ? 'Paid' : 'Due'}
-                            </Badge>
+
+                            {/* Invoices for this group */}
+                            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                              {groupInvoices.map((invoice) => (
+                                <Card key={invoice.id} className="p-4 border-border/50 bg-card backdrop-blur-sm hover:shadow-md transition-all">
+                                  <div className="space-y-2">
+                                    <div className="flex items-start justify-between">
+                                      <div>
+                                        <h4 className="font-medium text-sm">{invoice.invoice_number || 'Invoice'}</h4>
+                                        <p className="text-xs text-muted-foreground">ID: {invoice.id.slice(0, 8)}</p>
+                                      </div>
+                                      <Badge
+                                        variant={invoice.status === 'paid' ? 'default' : 'outline'}
+                                        className={
+                                          invoice.status === 'paid'
+                                            ? 'bg-green-100 text-green-700 border-green-200'
+                                            : 'bg-red-100 text-red-700 border-red-200'
+                                        }
+                                      >
+                                        {invoice.status === 'paid' ? 'Paid' : 'Due'}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-base font-bold">
+                                      ${(invoice.amount_due_cents / 100).toFixed(2)}
+                                    </p>
+                                    {invoiceGroupBy === 'property' && invoice.bill_month && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {invoice.bill_month}
+                                      </p>
+                                    )}
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
                           </div>
-                          <p className="text-sm font-semibold">
-                            ${(invoice.amount_due_cents / 100).toFixed(2)}
-                          </p>
-                        </div>
-                      </Card>
-                    ))}
+                        );
+                      });
+                    })()}
                   </div>
                 )}
               </div>
@@ -1671,11 +1886,12 @@ export default function AdminPage() {
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="ledger-amount">Amount (cents)</Label>
+                      <Label htmlFor="ledger-amount">Amount ($)</Label>
                       <Input
                         id="ledger-amount"
                         type="number"
-                        placeholder="10000"
+                        step="0.01"
+                        placeholder="100.00"
                         value={ledgerAmount}
                         onChange={(e) => setLedgerAmount(e.target.value)}
                       />
@@ -1704,6 +1920,198 @@ export default function AdminPage() {
                     {busyLedger ? 'Adding…' : `Add ${ledgerCategory === 'revenue' ? 'Revenue' : 'Expense'}`}
                   </Button>
                 </div>
+              </div>
+
+              <Separator />
+
+              {/* All Revenue/Expenses */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium flex items-center gap-2">
+                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    All Entries
+                    <Badge variant="outline" className="text-xs">
+                      {ledgerEntries.length} total
+                    </Badge>
+                  </h3>
+                  {/* Filters */}
+                  <div className="flex items-center gap-4 text-xs">
+                    {/* Month Filter */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Filter:</span>
+                      <select
+                        value={ledgerFilterMonth}
+                        onChange={(e) => setLedgerFilterMonth(e.target.value)}
+                        className="h-8 rounded-md border border-border bg-background px-2 text-xs shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
+                      >
+                        <option value="all">All Months</option>
+                        {(() => {
+                          const months = new Set<string>();
+                          ledgerEntries.forEach(entry => {
+                            const month = entry.entry_date?.slice(0, 7);
+                            if (month) months.add(month);
+                          });
+                          return Array.from(months).sort().reverse().map(month => {
+                            const [year, monthNum] = month.split('-').map(Number);
+                            const label = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                            return <option key={month} value={month}>{label}</option>;
+                          });
+                        })()}
+                      </select>
+                    </div>
+
+                    {/* Group By Toggle */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Group by:</span>
+                      <div className="flex items-center gap-1 bg-muted/30 rounded-md p-1 border border-border">
+                        <button
+                          onClick={() => setLedgerGroupBy('month')}
+                          className={`px-2 py-1 rounded transition-all cursor-pointer ${
+                            ledgerGroupBy === 'month' ? 'bg-primary text-primary-foreground font-medium' : 'text-foreground hover:bg-muted/50'
+                          }`}
+                        >
+                          Month
+                        </button>
+                        <button
+                          onClick={() => setLedgerGroupBy('property')}
+                          className={`px-2 py-1 rounded transition-all cursor-pointer ${
+                            ledgerGroupBy === 'property' ? 'bg-primary text-primary-foreground font-medium' : 'text-foreground hover:bg-muted/50'
+                          }`}
+                        >
+                          Property
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {ledgerEntries.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No entries yet.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {(() => {
+                      // Filter entries by selected month
+                      const filteredEntries = ledgerFilterMonth === 'all'
+                        ? ledgerEntries
+                        : ledgerEntries.filter(entry => entry.entry_date?.slice(0, 7) === ledgerFilterMonth);
+
+                      // Group entries by month or property
+                      const grouped = filteredEntries.reduce((acc: Record<string, any[]>, entry) => {
+                        const key = ledgerGroupBy === 'month'
+                          ? entry.entry_date?.slice(0, 7) || 'no-date' // YYYY-MM
+                          : entry.property_id || 'no-property';
+                        if (!acc[key]) acc[key] = [];
+                        acc[key].push(entry);
+                        return acc;
+                      }, {});
+
+                      return Object.entries(grouped).map(([key, entries]) => {
+                        let groupLabel = '';
+                        let groupIcon = null;
+
+                        if (ledgerGroupBy === 'month') {
+                          // Parse YYYY-MM to avoid timezone issues
+                          const [year, month] = key.split('-').map(Number);
+                          groupLabel = new Date(year, month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                          groupIcon = (
+                            <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          );
+                        } else {
+                          groupLabel = entries[0]?.properties?.name || 'Unknown Property';
+                          groupIcon = (
+                            <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                          );
+                        }
+
+                        const totalRevenue = entries.filter(e => e.amount_cents > 0).reduce((sum, e) => sum + e.amount_cents, 0);
+                        const totalExpenses = entries.filter(e => e.amount_cents < 0).reduce((sum, e) => sum + Math.abs(e.amount_cents), 0);
+
+                        return (
+                          <div key={key} className="border border-border/50 rounded-lg p-4 bg-gradient-to-r from-muted/20 to-muted/10">
+                            {/* Group Header */}
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                {groupIcon}
+                                {groupLabel}
+                                <Badge variant="outline" className="text-xs ml-1">{entries.length}</Badge>
+                              </h4>
+                              <div className="flex items-center gap-3 text-xs">
+                                <span className="text-green-600 font-medium">+${(totalRevenue / 100).toFixed(2)}</span>
+                                <span className="text-red-600 font-medium">-${(totalExpenses / 100).toFixed(2)}</span>
+                              </div>
+                            </div>
+
+                            {/* Entries for this month */}
+                            <div className="space-y-2">
+                              {entries.map((entry) => {
+                                const isRevenue = entry.amount_cents > 0;
+                                return (
+                                  <Card key={entry.id} className="group hover:shadow-md transition-all duration-200 border-border/50 bg-card relative">
+                                    {/* Delete Button */}
+                                    <button
+                                      onClick={() => deleteLedgerEntry(entry.id)}
+                                      className="absolute top-2 right-2 p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all duration-200 cursor-pointer opacity-0 group-hover:opacity-100"
+                                      title="Delete entry"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                    </button>
+                                    <div className="p-3 flex items-center justify-between gap-4">
+                                      <div className="flex items-center gap-3 flex-1">
+                                        {/* Icon */}
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                          isRevenue ? 'bg-green-100' : 'bg-red-100'
+                                        }`}>
+                                          <svg className={`w-4 h-4 ${isRevenue ? 'text-green-600' : 'text-red-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            {isRevenue ? (
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            ) : (
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            )}
+                                          </svg>
+                                        </div>
+
+                                        {/* Details */}
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2 mb-0.5">
+                                            <p className="text-sm font-medium text-foreground">{entry.description}</p>
+                                            <Badge variant={isRevenue ? 'default' : 'secondary'} className={`text-xs ${
+                                              isRevenue ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'
+                                            }`}>
+                                              {isRevenue ? 'Revenue' : 'Expense'}
+                                            </Badge>
+                                          </div>
+                                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                            <span>{entry.properties?.name || 'Unknown'}</span>
+                                            <span>•</span>
+                                            <span>{new Date(entry.entry_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                          </div>
+                                        </div>
+
+                                        {/* Amount */}
+                                        <div className="text-right">
+                                          <p className={`text-base font-bold ${isRevenue ? 'text-green-600' : 'text-red-600'}`}>
+                                            {isRevenue ? '+' : '-'}${Math.abs(entry.amount_cents / 100).toFixed(2)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </Card>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                )}
               </div>
 
               <Separator />
@@ -2232,7 +2640,14 @@ export default function AdminPage() {
                           </div>
                           <p className="text-xs font-medium text-muted-foreground mb-2">Net Revenue</p>
                           <p className="text-3xl font-bold text-blue-700 tracking-tight">
-                            ${(((propertyKpis.gross_revenue_cents || 0) - (propertyKpis.expenses_cents || 0)) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            ${(() => {
+                              const grossRevenue = propertyKpis.gross_revenue_cents || 0;
+                              const expenses = propertyKpis.expenses_cents || 0;
+                              const feePercent = propertyKpis.fee_percent || 12;
+                              const truHostFees = Math.floor((grossRevenue * feePercent) / 100);
+                              const netRevenue = (grossRevenue - expenses - truHostFees) / 100;
+                              return netRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            })()}
                           </p>
                         </div>
                       </Card>
