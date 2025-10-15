@@ -78,6 +78,9 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
   const [ledgerFilterMonth, setLedgerFilterMonth] = useState<string>('all');
   const [expandedInvoiceMonths, setExpandedInvoiceMonths] = useState<Set<string>>(new Set());
   const [invoiceFilterMonth, setInvoiceFilterMonth] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'monthly' | 'annual'>('monthly');
+  const [annualKpis, setAnnualKpis] = useState<KPI[]>([]);
+  const [loadingAnnual, setLoadingAnnual] = useState(false);
 
   // Generate month options (last 12 months)
   const generateMonthOptions = () => {
@@ -179,6 +182,64 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
     fetchLedgerEntries();
   }, [orgId]);
 
+  // Fetch annual KPIs when view mode changes to annual
+  useEffect(() => {
+    if (viewMode !== 'annual') return;
+
+    const fetchAnnualKpis = async () => {
+      setLoadingAnnual(true);
+      try {
+        // Get the current year
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth() + 1;
+
+        // Fetch all KPIs for the current year
+        const allKpis: KPI[] = [];
+        for (let m = 1; m <= currentMonth; m++) {
+          const monthStr = `${currentYear}-${String(m).padStart(2, '0')}`;
+
+          // Get the auth session and token
+          const { data: { session } } = await sb.auth.getSession();
+          const headers: HeadersInit = { 'Content-Type': 'application/json' };
+          if (session?.access_token) {
+            headers['Authorization'] = `Bearer ${session.access_token}`;
+          }
+
+          // If a specific property is selected, fetch property KPIs
+          if (selectedPropertyId) {
+            const response = await fetch(
+              `/api/orgs/${orgId}/properties/${selectedPropertyId}/kpis?month=${monthStr}`,
+              { headers }
+            );
+            const data = await response.json();
+            if (data.ok && data.kpi) {
+              allKpis.push({ ...data.kpi, month: monthStr });
+            }
+          } else {
+            // Fetch user-level KPIs for all properties
+            const response = await fetch(
+              `/api/kpis?org=${orgId}&month=${monthStr}`,
+              { headers }
+            );
+            const data = await response.json();
+            if (data.ok && data.kpis && data.kpis.length > 0) {
+              allKpis.push(data.kpis[0]);
+            }
+          }
+        }
+
+        setAnnualKpis(allKpis);
+      } catch (error) {
+        console.error('Error fetching annual KPIs:', error);
+        setAnnualKpis([]);
+      } finally {
+        setLoadingAnnual(false);
+      }
+    };
+
+    fetchAnnualKpis();
+  }, [viewMode, orgId, selectedPropertyId, sb]);
+
   const handlePropertyChange = (propertyId: string) => {
     if (propertyId === 'all') {
       setSelectedPropertyId(null);
@@ -191,20 +252,39 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
   const displayKpi = selectedPropertyId && propertyKpi ? propertyKpi : kpi;
   const selectedProperty = properties.find(p => p.id === selectedPropertyId);
 
+  // Calculate year-to-date totals if in annual view
+  const annualTotals = viewMode === 'annual' && annualKpis.length > 0
+    ? {
+        gross_revenue_cents: annualKpis.reduce((sum, k) => sum + (k.gross_revenue_cents || 0), 0),
+        expenses_cents: annualKpis.reduce((sum, k) => sum + (k.expenses_cents || 0), 0),
+        net_revenue_cents: annualKpis.reduce((sum, k) => sum + (k.net_revenue_cents || 0), 0),
+        nights_booked: annualKpis.reduce((sum, k) => sum + (k.nights_booked || 0), 0),
+        properties: displayKpi?.properties || 0,
+        // Calculate average occupancy/vacancy rates
+        occupancy_rate: annualKpis.reduce((sum, k) => sum + (k.occupancy_rate || 0), 0) / annualKpis.length,
+        vacancy_rate: annualKpis.reduce((sum, k) => sum + (k.vacancy_rate || 0), 0) / annualKpis.length,
+        org_id: displayKpi?.org_id || orgId,
+        month: 'YTD',
+      }
+    : null;
+
+  // Use annual totals if in annual view, otherwise use display KPI
+  const activeKpi = viewMode === 'annual' ? annualTotals : displayKpi;
+
   // Calculate plan fees based on gross revenue and plan percentage
-  const planFeesInCents = plan && displayKpi ? Math.floor((displayKpi.gross_revenue_cents * plan.percent) / 100) : 0;
+  const planFeesInCents = plan && activeKpi ? Math.floor((activeKpi.gross_revenue_cents * plan.percent) / 100) : 0;
 
   const metricCards = [
     {
       label: 'Gross Revenue',
-      value: formatMoney(displayKpi?.gross_revenue_cents),
+      value: formatMoney(activeKpi?.gross_revenue_cents),
       metricType: 'gross_revenue' as MetricType,
       icon: '💰',
       isReceipts: false,
     },
     {
       label: 'Expenses',
-      value: formatMoney(displayKpi?.expenses_cents),
+      value: formatMoney(activeKpi?.expenses_cents),
       metricType: 'expenses' as MetricType,
       icon: '💸',
       isReceipts: false,
@@ -215,31 +295,32 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
       metricType: 'expenses' as MetricType,
       icon: '🏢',
       isReceipts: false,
+      isCalculated: true, // This is a calculated value, not clickable
     },
     {
       label: 'Net Revenue',
-      value: formatMoney(displayKpi?.net_revenue_cents),
+      value: formatMoney(activeKpi?.net_revenue_cents),
       metricType: 'net_revenue' as MetricType,
       icon: '📈',
       isReceipts: false,
     },
     {
       label: 'Nights Booked',
-      value: formatNumber(displayKpi?.nights_booked),
+      value: formatNumber(activeKpi?.nights_booked),
       metricType: 'nights_booked' as MetricType,
       icon: '🏠',
       isReceipts: false,
     },
     {
       label: 'Occupancy',
-      value: formatPercent(displayKpi?.occupancy_rate),
+      value: formatPercent(activeKpi?.occupancy_rate),
       metricType: 'occupancy_rate' as MetricType,
       icon: '📊',
       isReceipts: false,
     },
     {
       label: 'Vacancy',
-      value: formatPercent(displayKpi?.vacancy_rate),
+      value: formatPercent(activeKpi?.vacancy_rate),
       metricType: 'vacancy_rate' as MetricType,
       icon: '📉',
       isReceipts: false,
@@ -334,6 +415,40 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
           <Separator className="mt-1 mb-4 bg-border" />
 
           <div className="flex flex-wrap items-center gap-4 text-sm animate-slide-in pb-4">
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2 bg-muted/30 rounded-lg p-1 border border-[#E1ECDB]">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setViewMode('monthly')}
+                className={`h-7 px-3 text-xs font-medium transition-all ${
+                  viewMode === 'monthly'
+                    ? 'bg-[#9db896] text-white shadow-sm hover:bg-[#9db896]/90'
+                    : 'text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Monthly
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setViewMode('annual')}
+                className={`h-7 px-3 text-xs font-medium transition-all ${
+                  viewMode === 'annual'
+                    ? 'bg-[#9db896] text-white shadow-sm hover:bg-[#9db896]/90'
+                    : 'text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Year to Date
+              </Button>
+            </div>
+
             {/* Property Selector */}
             {properties.length > 0 && (
               <div className="flex items-center gap-2">
@@ -357,20 +472,28 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
               </div>
             )}
 
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">Month:</span>
-              <select
-                value={month}
-                onChange={(e) => handleMonthChange(e.target.value)}
-                className="h-8 rounded-md border border-border bg-background px-3 text-sm font-semibold tabular-nums shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
-              >
-                {monthOptions.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {viewMode === 'monthly' && (
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Month:</span>
+                <select
+                  value={month}
+                  onChange={(e) => handleMonthChange(e.target.value)}
+                  className="h-8 rounded-md border border-border bg-background px-3 text-sm font-semibold tabular-nums shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
+                >
+                  {monthOptions.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {viewMode === 'annual' && loadingAnnual && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                <span>Loading year-to-date data...</span>
+              </div>
+            )}
             {plan && (
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Plan:</span>
@@ -387,12 +510,19 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
         {/* KPI Cards */}
         <div className="mb-8 animate-fade-in">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Performance Metrics
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Performance Metrics
+              </h2>
+              {viewMode === 'annual' && (
+                <Badge className="bg-[#9db896] text-white border-[#9db896] font-semibold">
+                  Year to Date {new Date().getFullYear()}
+                </Badge>
+              )}
+            </div>
             {selectedProperty && (
               <div className="mt-2 flex items-center gap-2">
                 <Badge variant="outline" className="text-sm font-medium border-primary/30 bg-primary/5 text-black">
@@ -408,13 +538,18 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
             {metricCards.map((card, index) => (
               <Card
                 key={card.label}
-                className="cursor-pointer transition-all duration-500 ease-in-out hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/3 hover:border-primary/20 bg-card overflow-hidden group animate-fade-in"
+                className={`transition-all duration-500 ease-in-out bg-card overflow-hidden group animate-fade-in ${
+                  (card as any).isCalculated
+                    ? 'cursor-default'
+                    : 'cursor-pointer hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/3 hover:border-primary/20'
+                }`}
                 style={{
                   animationDelay: `${index * 50}ms`,
                   border: '1px solid #E1ECDB',
                   transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
                 onClick={() => {
+                  if ((card as any).isCalculated) return; // Don't open chart for calculated values
                   if (card.isReceipts) {
                     setShowReceiptsModal(true);
                   } else {
@@ -431,20 +566,37 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                   <div className="text-3xl font-semibold text-foreground mb-2 tabular-nums tracking-tight">
                     {card.value}
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-primary font-medium transition-all duration-500 ease-in-out group-hover:gap-1.5">
-                    <span>{card.isReceipts ? 'View Receipts' : 'View History'}</span>
-                    <svg className="w-3 h-3 transition-transform duration-500 ease-in-out group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
+                  {!(card as any).isCalculated && (
+                    <div className="flex items-center gap-1 text-xs text-primary font-medium transition-all duration-500 ease-in-out group-hover:gap-1.5">
+                      <span>{card.isReceipts ? 'View Receipts' : 'View History'}</span>
+                      <svg className="w-3 h-3 transition-transform duration-500 ease-in-out group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  )}
+                  {(card as any).isCalculated && (
+                    <div className="text-xs text-muted-foreground">
+                      Calculated Value
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
           </div>
-          {!displayKpi && (
+          {!activeKpi && (
             <p className="text-sm text-muted-foreground mt-4 text-center">
-              💡 No data for {month} yet{selectedProperty ? ` for ${selectedProperty.name}` : ''}. Values shown are default.
+              💡 No data for {viewMode === 'annual' ? `year ${new Date().getFullYear()}` : month} yet{selectedProperty ? ` for ${selectedProperty.name}` : ''}. Values shown are default.
             </p>
+          )}
+          {viewMode === 'annual' && annualKpis.length > 0 && (
+            <div className="mt-4 p-3 rounded-lg border border-[#E1ECDB] bg-[#E1ECDB]/10">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <svg className="w-4 h-4 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Showing totals from <strong>{annualKpis.length} month{annualKpis.length !== 1 ? 's' : ''}</strong> in {new Date().getFullYear()}</span>
+              </div>
+            </div>
           )}
         </div>
 

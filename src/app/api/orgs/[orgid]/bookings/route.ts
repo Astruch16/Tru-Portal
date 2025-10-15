@@ -116,38 +116,64 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ or
     // Get the month from check-in date (YYYY-MM-01)
     const month = booking.check_in.slice(0, 7) + '-01';
 
-    // Check if KPI record exists for this org and month
-    const { data: existingKpi } = await admin
-      .from('kpis')
-      .select('*')
-      .eq('org_id', orgId)
-      .eq('month', month)
+    // Get the user who owns this property
+    const { data: userProperty } = await admin
+      .from('user_properties')
+      .select('user_id')
+      .eq('property_id', booking.property_id)
       .maybeSingle();
 
-    if (existingKpi) {
-      // Update existing KPI - add nights
-      await admin
+    const userId = userProperty?.user_id;
+
+    if (userId) {
+      // Check if KPI record exists for this user and month
+      const { data: existingKpi } = await admin
         .from('kpis')
-        .update({
-          nights_booked: (existingKpi.nights_booked || 0) + nights,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingKpi.id);
-    } else {
-      // Create new KPI record
-      await admin
-        .from('kpis')
-        .insert({
-          org_id: orgId,
-          month: month,
-          nights_booked: nights,
-          gross_revenue_cents: 0,
-          expenses_cents: 0,
-          net_revenue_cents: 0,
-          properties: 0,
-          occupancy_rate: 0,
-          vacancy_rate: 0
-        });
+        .select('*')
+        .eq('org_id', orgId)
+        .eq('user_id', userId)
+        .eq('month', month)
+        .maybeSingle();
+
+      // Calculate days in month for occupancy rate
+      const [year, monthNum] = month.split('-').map(Number);
+      const daysInMonth = new Date(year, monthNum, 0).getDate();
+
+      if (existingKpi) {
+        // Update existing KPI - add nights and recalculate occupancy
+        const newNightsBooked = (existingKpi.nights_booked || 0) + nights;
+        const newOccupancyRate = newNightsBooked / daysInMonth;
+        const newVacancyRate = 1 - newOccupancyRate;
+
+        await admin
+          .from('kpis')
+          .update({
+            nights_booked: newNightsBooked,
+            occupancy_rate: newOccupancyRate,
+            vacancy_rate: newVacancyRate,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingKpi.id);
+      } else {
+        // Create new KPI record for this user
+        const occupancyRate = nights / daysInMonth;
+        const vacancyRate = 1 - occupancyRate;
+
+        await admin
+          .from('kpis')
+          .insert({
+            org_id: orgId,
+            user_id: userId,
+            month: month,
+            nights_booked: nights,
+            gross_revenue_cents: 0,
+            expenses_cents: 0,
+            net_revenue_cents: 0,
+            properties: 0,
+            occupancy_rate: occupancyRate,
+            vacancy_rate: vacancyRate
+          });
+      }
     }
   }
 
@@ -159,21 +185,43 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ or
 
     const month = booking.check_in.slice(0, 7) + '-01';
 
-    const { data: existingKpi } = await admin
-      .from('kpis')
-      .select('*')
-      .eq('org_id', orgId)
-      .eq('month', month)
+    // Get the user who owns this property
+    const { data: userProperty } = await admin
+      .from('user_properties')
+      .select('user_id')
+      .eq('property_id', booking.property_id)
       .maybeSingle();
 
-    if (existingKpi) {
-      await admin
+    const userId = userProperty?.user_id;
+
+    if (userId) {
+      const { data: existingKpi } = await admin
         .from('kpis')
-        .update({
-          nights_booked: Math.max(0, (existingKpi.nights_booked || 0) - nights),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingKpi.id);
+        .select('*')
+        .eq('org_id', orgId)
+        .eq('user_id', userId)
+        .eq('month', month)
+        .maybeSingle();
+
+      if (existingKpi) {
+        // Calculate days in month for occupancy rate
+        const [year, monthNum] = month.split('-').map(Number);
+        const daysInMonth = new Date(year, monthNum, 0).getDate();
+
+        const newNightsBooked = Math.max(0, (existingKpi.nights_booked || 0) - nights);
+        const newOccupancyRate = newNightsBooked / daysInMonth;
+        const newVacancyRate = 1 - newOccupancyRate;
+
+        await admin
+          .from('kpis')
+          .update({
+            nights_booked: newNightsBooked,
+            occupancy_rate: newOccupancyRate,
+            vacancy_rate: newVacancyRate,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingKpi.id);
+      }
     }
   }
 
@@ -215,22 +263,44 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ o
 
     const month = booking.check_in.slice(0, 7) + '-01';
 
-    const { data: existingKpi } = await admin
-      .from('kpis')
-      .select('*')
-      .eq('org_id', orgId)
-      .eq('month', month)
+    // Get the user who owns this property
+    const { data: userProperty } = await admin
+      .from('user_properties')
+      .select('user_id')
+      .eq('property_id', booking.property_id)
       .maybeSingle();
 
-    if (existingKpi) {
-      // Subtract the nights from KPI
-      await admin
+    const userId = userProperty?.user_id;
+
+    if (userId) {
+      const { data: existingKpi } = await admin
         .from('kpis')
-        .update({
-          nights_booked: Math.max(0, (existingKpi.nights_booked || 0) - nights),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingKpi.id);
+        .select('*')
+        .eq('org_id', orgId)
+        .eq('user_id', userId)
+        .eq('month', month)
+        .maybeSingle();
+
+      if (existingKpi) {
+        // Calculate days in month for occupancy rate
+        const [year, monthNum] = month.split('-').map(Number);
+        const daysInMonth = new Date(year, monthNum, 0).getDate();
+
+        const newNightsBooked = Math.max(0, (existingKpi.nights_booked || 0) - nights);
+        const newOccupancyRate = newNightsBooked / daysInMonth;
+        const newVacancyRate = 1 - newOccupancyRate;
+
+        // Subtract the nights from KPI and recalculate occupancy
+        await admin
+          .from('kpis')
+          .update({
+            nights_booked: newNightsBooked,
+            occupancy_rate: newOccupancyRate,
+            vacancy_rate: newVacancyRate,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingKpi.id);
+      }
     }
   }
 

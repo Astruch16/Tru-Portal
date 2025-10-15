@@ -20,11 +20,32 @@ export async function GET(req: NextRequest) {
   }
   const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-  const { data, error } = await admin.rpc('api_get_org_month_kpis', {
-    p_org_id: orgId,
-    p_month: month,
-  });
+  // Get the authenticated user from the Authorization header
+  const authHeader = req.headers.get('Authorization');
+  let userId: string | null = null;
+
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    try {
+      const { data: { user } } = await admin.auth.getUser(token);
+      userId = user?.id || null;
+    } catch (err) {
+      console.error('Error getting user from token:', err);
+    }
+  }
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized - user not found' }, { status: 401 });
+  }
+
+  // Fetch user-specific KPIs for this org and month
+  const { data, error } = await admin
+    .from('kpis')
+    .select('*')
+    .eq('org_id', orgId)
+    .eq('user_id', userId)
+    .eq('month', month);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ ok: true, kpis: data });
+  return NextResponse.json({ ok: true, kpis: data || [] });
 }

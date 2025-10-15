@@ -1267,24 +1267,46 @@ export default function AdminPage() {
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="booking-checkin">Check-in</Label>
-                      <Input
-                        id="booking-checkin"
-                        type="date"
-                        value={bookingCheckIn}
-                        onChange={(e) => setBookingCheckIn(e.target.value)}
-                        className="cursor-pointer"
-                      />
+                      <Label htmlFor="booking-checkin" className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Check-in
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="booking-checkin"
+                          type="date"
+                          value={bookingCheckIn}
+                          onChange={(e) => setBookingCheckIn(e.target.value)}
+                          className="cursor-pointer pl-10 border-[#E1ECDB] focus:ring-[#9db896] focus:border-[#9db896] hover:border-[#9db896] transition-colors"
+                          style={{ colorScheme: 'light' }}
+                        />
+                        <svg className="w-5 h-5 text-[#9db896] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                        </svg>
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="booking-checkout">Check-out</Label>
-                      <Input
-                        id="booking-checkout"
-                        type="date"
-                        value={bookingCheckOut}
-                        onChange={(e) => setBookingCheckOut(e.target.value)}
-                        className="cursor-pointer"
-                      />
+                      <Label htmlFor="booking-checkout" className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Check-out
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="booking-checkout"
+                          type="date"
+                          value={bookingCheckOut}
+                          onChange={(e) => setBookingCheckOut(e.target.value)}
+                          className="cursor-pointer pl-10 border-[#E1ECDB] focus:ring-[#9db896] focus:border-[#9db896] hover:border-[#9db896] transition-colors"
+                          style={{ colorScheme: 'light' }}
+                        />
+                        <svg className="w-5 h-5 text-[#9db896] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="booking-status">Status</Label>
@@ -1897,14 +1919,25 @@ export default function AdminPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="ledger-date">Date</Label>
-                      <Input
-                        id="ledger-date"
-                        type="date"
-                        value={ledgerDate}
-                        onChange={(e) => setLedgerDate(e.target.value)}
-                        className="cursor-pointer"
-                      />
+                      <Label htmlFor="ledger-date" className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Date
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="ledger-date"
+                          type="date"
+                          value={ledgerDate}
+                          onChange={(e) => setLedgerDate(e.target.value)}
+                          className="cursor-pointer pl-10 border-[#E1ECDB] focus:ring-[#9db896] focus:border-[#9db896] hover:border-[#9db896] transition-colors"
+                          style={{ colorScheme: 'light' }}
+                        />
+                        <svg className="w-5 h-5 text-[#9db896] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="ledger-description">Description</Label>

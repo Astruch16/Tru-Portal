@@ -46,25 +46,43 @@ export async function GET(
       return NextResponse.json({ error: 'Property not found' }, { status: 404 });
     }
 
-    // Get the organization's plan to calculate TruHost fees
-    const { data: plan } = await admin
-      .from('plans')
-      .select('percent')
-      .eq('org_id', orgId)
-      .lte('effective_date', month)
-      .order('effective_date', { ascending: false })
-      .limit(1)
+    // Get the user who owns this property
+    const { data: userProperty } = await admin
+      .from('user_properties')
+      .select('user_id')
+      .eq('property_id', propertyId)
       .maybeSingle();
 
-    const feePercent = plan?.percent ?? 12; // Default to 12% if no plan
+    const userId = userProperty?.user_id;
+
+    // Get the user's plan to calculate TruHost fees
+    let feePercent = 12; // Default to 12% if no plan
+    if (userId) {
+      const { data: plan } = await admin
+        .from('plans')
+        .select('percent')
+        .eq('org_id', orgId)
+        .eq('user_id', userId)
+        .lte('effective_date', month)
+        .order('effective_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      feePercent = plan?.percent ?? 12;
+    }
+
+    // Calculate the start and end dates for the month
+    const [year, monthNum] = monthParam.split('-').map(Number);
+    const startDate = `${monthParam}-01`;
+    const endDate = `${year}-${String(monthNum + 1).padStart(2, '0')}-01`;
 
     // Get ledger entries for this property and month
     const { data: ledgerEntries, error: ledgerError } = await admin
       .from('ledger_entries')
       .select('amount_cents')
       .eq('property_id', propertyId)
-      .gte('entry_date', monthParam + '-01')
-      .lt('entry_date', new Date(new Date(month).getFullYear(), new Date(month).getMonth() + 1, 1).toISOString().split('T')[0]);
+      .gte('entry_date', startDate)
+      .lt('entry_date', endDate);
 
     if (ledgerError) {
       return NextResponse.json({ error: ledgerError.message }, { status: 400 });
@@ -88,8 +106,8 @@ export async function GET(
       .select('check_in, check_out')
       .eq('property_id', propertyId)
       .eq('status', 'completed')
-      .gte('check_in', monthParam + '-01')
-      .lt('check_in', new Date(new Date(month).getFullYear(), new Date(month).getMonth() + 1, 1).toISOString().split('T')[0]);
+      .gte('check_in', startDate)
+      .lt('check_in', endDate);
 
     let nightsBooked = 0;
     (bookings || []).forEach((booking) => {
@@ -106,9 +124,9 @@ export async function GET(
     const netRevenueCents = grossRevenueCents - expensesCents - truHostFees;
 
     // Calculate occupancy rate (days in month)
-    const startDate = new Date(month);
-    const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
-    const daysInMonth = endDate.getDate();
+    const monthDate = new Date(month);
+    const lastDayOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+    const daysInMonth = lastDayOfMonth.getDate();
     const occupancyRate = nightsBooked / daysInMonth;
     const vacancyRate = 1 - occupancyRate;
 

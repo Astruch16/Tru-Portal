@@ -107,10 +107,22 @@ export default async function PortalPage({
     if (p && isPlan(p)) plan = p;
   } catch { plan = null; }
 
-  // KPIs
-  const kpiRes = await fetch(`${base}/api/kpis?org=${orgId}&month=${ym}`, { cache: 'no-store' });
+  // KPIs - fetch with authentication to get user-specific KPIs
   let k: KPI | null = null;
   try {
+    const { supabaseServer } = await import('@/lib/supabase/server');
+    const sb = await supabaseServer();
+    const { data: { session } } = await sb.auth.getSession();
+
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
+    const kpiRes = await fetch(`${base}/api/kpis?org=${orgId}&month=${ym}`, {
+      cache: 'no-store',
+      headers
+    });
     const kpiJson = await kpiRes.json();
     let list: unknown[] = [];
     if (isRecord(kpiJson) && Array.isArray((kpiJson as { kpis?: unknown[] }).kpis)) {
