@@ -830,8 +830,8 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                               <div className="text-xl font-bold text-[#88a882]">
                                 {config.format(value)}
                               </div>
-                              {isMax && <Badge className="bg-green-600 hover:bg-green-700">Peak</Badge>}
-                              {isMin && <Badge className="bg-orange-600 hover:bg-orange-700 text-white">Low</Badge>}
+                              {isMax && <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">Peak</Badge>}
+                              {isMin && <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">Low</Badge>}
                             </div>
                           </div>
                         );
