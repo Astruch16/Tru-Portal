@@ -832,7 +832,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   {isBreakdownExpanded && (
                     <>
                       {/* Sort Options Bar */}
-                      <div className="px-6 pb-4 border-b border-[#E1ECDB]">
+                      <div className="px-6 py-4 border-b border-[#E1ECDB]">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium text-gray-600 mr-2">Sort by:</span>
                           <div className="flex items-center gap-2 bg-[#F8F6F2] rounded-lg p-1 border border-[#E1ECDB]">
@@ -886,7 +886,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                       </div>
 
                       {/* Month List */}
-                      <CardContent>
+                      <CardContent className="pt-6">
                         <div className="space-y-3 max-h-96 overflow-y-auto">
                           {(() => {
                             let sortedKpis = [...kpis];
@@ -917,15 +917,8 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                                   className="flex items-center justify-between p-4 bg-[#F8F6F2] hover:bg-[#E1ECDB]/20 rounded-lg transition-colors"
                                   style={{ border: '1px solid #E1ECDB' }}
                                 >
-                                  <div className="flex items-center gap-4">
-                                    <div className="text-2xl font-bold text-gray-400 w-8">
-                                      #{idx + 1}
-                                    </div>
-                                    <div>
-                                      <div className="font-semibold text-gray-900">
-                                        {monthLabel}
-                                      </div>
-                                    </div>
+                                  <div className="font-semibold text-gray-900">
+                                    {monthLabel}
                                   </div>
                                   <div className="flex items-center gap-3">
                                     <div className="text-xl font-bold text-[#88a882]">
