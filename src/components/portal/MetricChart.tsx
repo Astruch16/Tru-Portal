@@ -926,11 +926,11 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                                     {monthLabel}
                                   </div>
                                   <div className="flex items-center gap-3">
+                                    {isMax && <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">Peak</Badge>}
+                                    {isMin && <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">Low</Badge>}
                                     <div className="text-xl font-bold text-[#88a882]">
                                       {config.format(value)}
                                     </div>
-                                    {isMax && <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">Peak</Badge>}
-                                    {isMin && <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">Low</Badge>}
                                   </div>
                                 </div>
                               );
