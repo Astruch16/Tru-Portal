@@ -23,7 +23,8 @@ const emailWrapper = (content: string) => `
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #9db896 0%, #E1ECDB 100%); padding: 40px 30px; text-align: center;">
-              <img src="${process.env.NEXT_PUBLIC_SITE_URL}/truhost-logo.png" alt="TruHost Logo" style="max-width: 180px; height: auto;">
+              <h1 style="margin: 0; font-size: 32px; font-weight: 700; color: #2c2c2c; letter-spacing: 1px;">TruHost</h1>
+              <p style="margin: 5px 0 0 0; font-size: 14px; color: #2c2c2c; font-weight: 500;">Property Management Ltd.</p>
             </td>
           </tr>
           <!-- Content -->
@@ -69,7 +70,20 @@ export function memberInvitationEmail(data: {
   organizationName: string;
   inviterName: string;
   loginUrl: string;
+  email: string;
+  temporaryPassword: string;
+  planTier?: string;
 }) {
+  const planNames = {
+    launch: 'Launch Plan (12%)',
+    elevate: 'Elevate Plan (18%)',
+    maximize: 'Maximize Plan (22%)',
+  };
+
+  const planDisplay = data.planTier && planNames[data.planTier as keyof typeof planNames]
+    ? planNames[data.planTier as keyof typeof planNames]
+    : null;
+
   const content = `
     <h1 style="margin: 0 0 20px 0; font-size: 28px; color: #2c2c2c; font-weight: 700;">
       Welcome to TruHost!
@@ -78,18 +92,35 @@ export function memberInvitationEmail(data: {
       Hi ${data.recipientName},
     </p>
     <p style="font-size: 16px; color: #2c2c2c; margin: 0 0 16px 0;">
-      ${data.inviterName} has invited you to join <strong>${data.organizationName}</strong> on TruHost, your property management portal.
+      ${data.inviterName} has invited you to join the TruHost Property Management Portal. Details below as follows:
     </p>
     ${infoBox(`
-      <p style="margin: 0; font-size: 14px; color: #2c2c2c;">
-        <strong>What you can do:</strong><br>
-        • View performance metrics and KPIs<br>
-        • Access invoices and payment history<br>
-        • Track revenue and expenses<br>
-        • View receipts and documentation<br>
-        • Monitor bookings and occupancy
+      <p style="margin: 0 0 12px 0; font-size: 14px; color: #2c2c2c;">
+        <strong>📧 Your Login Credentials:</strong>
+      </p>
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #2c2c2c;">
+        <strong>Email:</strong> ${data.email}
+      </p>
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #2c2c2c;">
+        <strong>Temporary Password:</strong> <code style="background-color: #e5e5e5; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${data.temporaryPassword}</code>
+      </p>
+      ${planDisplay ? `<p style="margin: 0 0 8px 0; font-size: 14px; color: #2c2c2c;">
+        <strong>Your Plan:</strong> ${planDisplay}
+      </p>` : ''}
+      <p style="margin: 12px 0 0 0; font-size: 13px; color: #666; font-style: italic;">
+        ⚠️ Please change your password after logging in for the first time. You can do this in your profile settings.
       </p>
     `)}
+    <p style="font-size: 16px; color: #2c2c2c; margin: 20px 0 8px 0;">
+      <strong>What you can do:</strong>
+    </p>
+    <p style="font-size: 14px; color: #2c2c2c; margin: 0 0 16px 0; line-height: 1.8;">
+      • View performance metrics and KPIs<br>
+      • Access invoices and payment history<br>
+      • Track revenue and expenses<br>
+      • View receipts and documentation<br>
+      • Monitor bookings and occupancy
+    </p>
     <p style="font-size: 16px; color: #2c2c2c; margin: 20px 0;">
       Click the button below to access your portal:
     </p>
@@ -111,7 +142,6 @@ export function memberInvitationEmail(data: {
 export function newBookingEmail(data: {
   recipientName: string;
   propertyName: string;
-  guestName: string;
   checkIn: string;
   checkOut: string;
   nights: number;
@@ -129,7 +159,6 @@ export function newBookingEmail(data: {
     </p>
     ${infoBox(`
       <p style="margin: 0 0 8px 0; font-size: 14px; color: #2c2c2c;"><strong>Property:</strong> ${data.propertyName}</p>
-      <p style="margin: 0 0 8px 0; font-size: 14px; color: #2c2c2c;"><strong>Guest:</strong> ${data.guestName}</p>
       <p style="margin: 0 0 8px 0; font-size: 14px; color: #2c2c2c;"><strong>Check-in:</strong> ${data.checkIn}</p>
       <p style="margin: 0 0 8px 0; font-size: 14px; color: #2c2c2c;"><strong>Check-out:</strong> ${data.checkOut}</p>
       <p style="margin: 0; font-size: 14px; color: #2c2c2c;"><strong>Nights:</strong> ${data.nights}</p>
@@ -208,7 +237,7 @@ export function newInvoiceEmail(data: {
       Hi ${data.recipientName},
     </p>
     <p style="font-size: 16px; color: #2c2c2c; margin: 0 0 16px 0;">
-      A new invoice has been generated for ${data.organizationName}.
+      A new invoice has been added to your TruHost Portal.
     </p>
     ${infoBox(`
       <p style="margin: 0 0 8px 0; font-size: 14px; color: #2c2c2c;"><strong>Invoice #:</strong> ${data.invoiceNumber}</p>

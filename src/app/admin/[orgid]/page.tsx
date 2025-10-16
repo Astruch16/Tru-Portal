@@ -3068,15 +3068,42 @@ export default function AdminPage() {
                                       <Button
                                         onClick={async () => {
                                           try {
-                                            const res = await fetch(`/api/invoices/${invoice.id}/pdf-link`);
-                                            const data = await res.json();
+                                            console.log('Downloading invoice PDF:', invoice.id);
+
+                                            // First, try to get the PDF link from storage
+                                            let res = await fetch(`/api/invoices/${invoice.id}/pdf-link`);
+                                            let data = await res.json();
+                                            console.log('PDF link response:', data);
+
+                                            // If PDF doesn't exist in storage, generate it first
+                                            if (!data.ok && data.needsArchive) {
+                                              console.log('PDF not in storage, generating...');
+                                              // Generate PDF (this will also upload it to storage)
+                                              const pdfRes = await fetch(`/api/invoices/${invoice.id}/pdf`);
+                                              console.log('PDF generation response status:', pdfRes.status);
+
+                                              if (!pdfRes.ok) {
+                                                const errorText = await pdfRes.text();
+                                                console.error('PDF generation failed:', errorText);
+                                                alert(`Failed to generate PDF: ${errorText}`);
+                                                return;
+                                              }
+
+                                              // Now try to get the link again
+                                              res = await fetch(`/api/invoices/${invoice.id}/pdf-link`);
+                                              data = await res.json();
+                                              console.log('PDF link response after generation:', data);
+                                            }
+
                                             if (data.ok && data.url) {
                                               window.open(data.url, '_blank');
                                             } else {
-                                              alert('Failed to generate PDF link');
+                                              console.error('Failed to get PDF link:', data);
+                                              alert(`Failed to generate PDF link: ${JSON.stringify(data)}`);
                                             }
                                           } catch (error) {
-                                            alert('Error downloading PDF');
+                                            console.error('PDF download error:', error);
+                                            alert(`Error downloading PDF: ${error}`);
                                           }
                                         }}
                                         variant="outline"

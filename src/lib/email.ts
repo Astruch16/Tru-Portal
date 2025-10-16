@@ -17,6 +17,9 @@ export async function sendMemberInvitationEmail(data: {
   organizationName: string;
   inviterName: string;
   orgId: string;
+  email: string;
+  temporaryPassword: string;
+  planTier?: string;
 }) {
   const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/portal/${data.orgId}`;
 
@@ -25,6 +28,9 @@ export async function sendMemberInvitationEmail(data: {
     organizationName: data.organizationName,
     inviterName: data.inviterName,
     loginUrl,
+    email: data.email,
+    temporaryPassword: data.temporaryPassword,
+    planTier: data.planTier,
   });
 
   try {
@@ -45,7 +51,6 @@ export async function sendNewBookingEmail(data: {
   recipientEmails: string[];
   recipientName: string;
   propertyName: string;
-  guestName: string;
   checkIn: string;
   checkOut: string;
   nights: number;
@@ -56,7 +61,6 @@ export async function sendNewBookingEmail(data: {
   const emailContent = newBookingEmail({
     recipientName: data.recipientName,
     propertyName: data.propertyName,
-    guestName: data.guestName,
     checkIn: data.checkIn,
     checkOut: data.checkOut,
     nights: data.nights,
@@ -248,15 +252,26 @@ export async function getPropertyMemberEmails(propertyId: string): Promise<Array
 
   const userIds = userProperties.map(up => up.user_id);
 
+  // Get user profiles with first names
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, first_name')
+    .in('id', userIds);
+
   // Get user emails from auth.users
   const { data: users } = await admin.auth.admin.listUsers();
 
   const memberEmails = users.users
     .filter(user => userIds.includes(user.id))
-    .map(user => ({
-      email: user.email!,
-      name: user.user_metadata?.full_name || user.email!.split('@')[0],
-    }));
+    .map(user => {
+      const profile = profiles?.find(p => p.id === user.id);
+      const firstName = profile?.first_name || user.user_metadata?.first_name || user.email!.split('@')[0];
+
+      return {
+        email: user.email!,
+        name: firstName,
+      };
+    });
 
   return memberEmails;
 }

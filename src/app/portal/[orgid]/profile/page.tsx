@@ -55,6 +55,12 @@ export default function ProfilePage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [message, setMessage] = useState('');
 
+  const handleLogout = async () => {
+    const sb = supabaseClient();
+    await sb.auth.signOut();
+    router.push('/login');
+  };
+
   useEffect(() => {
     async function loadProfile() {
       const sb = supabaseClient();
@@ -249,7 +255,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-[#F8F6F2] flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading profile...</p>
@@ -267,11 +273,7 @@ export default function ProfilePage() {
     .slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-background relative">
-      {/* Subtle Background Pattern */}
-      <div className="fixed inset-0 opacity-[0.03] pointer-events-none" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236b9b7a' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-      }}></div>
+    <div className="min-h-screen bg-[#F8F6F2] relative">
 
       {/* Header */}
       <div className="bg-white border-b border-border shadow-sm relative">
@@ -297,33 +299,48 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Toggle Navigation */}
-            <div className="flex items-center gap-2 bg-muted/30 rounded-lg p-1 border border-border">
+            {/* Toggle Navigation & Logout */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-muted/30 rounded-lg p-1 border border-border">
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className={`transition-all duration-300 ${!isProfilePage ? 'bg-primary text-foreground font-medium shadow-sm hover:bg-primary/80' : 'text-foreground hover:bg-muted/50'}`}
+                >
+                  <Link href={`/portal/${orgId}`} className="flex items-center gap-2" prefetch={true}>
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    Dashboard
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className={`transition-all duration-300 ${isProfilePage ? 'bg-primary text-foreground font-medium shadow-sm hover:bg-primary/80' : 'text-foreground hover:bg-muted/50'}`}
+                >
+                  <Link href={`/portal/${orgId}/profile`} className="flex items-center gap-2" prefetch={true}>
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Profile
+                  </Link>
+                </Button>
+              </div>
+
+              {/* Logout Button */}
               <Button
-                asChild
-                variant="ghost"
+                onClick={handleLogout}
+                variant="outline"
                 size="sm"
-                className={`transition-all ${!isProfilePage ? 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90' : 'text-foreground hover:bg-muted/50'}`}
+                className="border-border hover:border-destructive hover:text-destructive hover:bg-destructive/5 transition-all duration-300 cursor-pointer"
               >
-                <Link href={`/portal/${orgId}`} className="flex items-center gap-2" prefetch={true}>
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                  </svg>
-                  Dashboard
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="ghost"
-                size="sm"
-                className={`transition-all ${isProfilePage ? 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90' : 'text-foreground hover:bg-muted/50'}`}
-              >
-                <Link href={`/portal/${orgId}/profile`} className="flex items-center gap-2" prefetch={true}>
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Profile
-                </Link>
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mr-2">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Logout
               </Button>
             </div>
           </div>

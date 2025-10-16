@@ -53,11 +53,18 @@ export async function GET(req: NextRequest, { params }: { params: { orgid?: stri
     if (mem.error) return NextResponse.json({ error: mem.error.message }, { status: 400 });
     if (!mem.data) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    // Only select columns we know exist in your schema (no total_cents, no file_path)
+    // Only select columns we know exist in your schema (including user_id for filtering)
     let q = admin
       .from('invoices')
-      .select('id, org_id, created_at, status, currency')
+      .select('id, org_id, user_id, invoice_number, bill_month, amount_due_cents, created_at, status, currency')
       .eq('org_id', orgId);
+
+    // Filter by user_id - only show invoices assigned to this user
+    // If user is owner/manager, they can see all invoices. If member, only their own.
+    const userRole = mem.data.role as string;
+    if (userRole === 'member') {
+      q = q.eq('user_id', user.id);
+    }
 
     if (start && end) {
       q = q
@@ -73,11 +80,21 @@ export async function GET(req: NextRequest, { params }: { params: { orgid?: stri
 
     const items = (inv.data as unknown as Row[]).map((r) => {
       const created = readString(r, 'created_at') ?? new Date().toISOString();
-      const d = new Date(created);
+      const billMonth = readString(r, 'bill_month') ?? created;
+      const d = new Date(billMonth);
       const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+
+      // Get amount_due_cents
+      const amountDue = r['amount_due_cents'];
+      const amountDueCents = typeof amountDue === 'number' ? amountDue : null;
+
       return {
         id: readString(r, 'id'),
         org_id: readString(r, 'org_id'),
+        user_id: readString(r, 'user_id'),
+        invoice_number: readString(r, 'invoice_number'),
+        bill_month: billMonth,
+        amount_due_cents: amountDueCents,
         created_at: created,
         month,
         status: readString(r, 'status') ?? 'due',

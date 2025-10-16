@@ -42,34 +42,76 @@ export async function POST(req: NextRequest) {
     if (org.error) return NextResponse.json({ error: org.error.message }, { status: 400 });
     if (!org.data) return NextResponse.json({ error: 'org not found' }, { status: 400 });
 
-    // Check caller’s role in this org
+    // Check caller's role in this org
     const mem = await admin
       .from('org_memberships')
       .select('role')
       .eq('org_id', orgId)
       .eq('user_id', user.id)
       .maybeSingle();
+
+    console.log('Authorization check:', {
+      userId: user.id,
+      orgId,
+      membershipData: mem.data,
+      membershipError: mem.error,
+    });
+
     if (mem.error) return NextResponse.json({ error: mem.error.message }, { status: 400 });
     if (!mem.data || !['owner','manager'].includes((mem.data.role as Role))) {
-      return NextResponse.json({ error: 'Forbidden: owner or manager required' }, { status: 403 });
+      return NextResponse.json({
+        error: 'Forbidden: owner or manager required',
+        debug: {
+          foundMembership: !!mem.data,
+          role: mem.data?.role,
+          userId: user.id,
+          orgId: orgId
+        }
+      }, { status: 403 });
     }
 
-    // 1) Create the auth user (confirmed)
-    const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (created.error) return NextResponse.json({ error: created.error.message }, { status: 400 });
+    // 1) Check if user already exists in auth, if so use existing, otherwise create new
+    let userId: string;
+    let userExists = false;
 
-    const userId = created.data.user?.id;
-    if (!userId) return NextResponse.json({ error: 'No user id returned from createUser' }, { status: 500 });
+    // Try to find existing user by email
+    const { data: existingUsers } = await admin.auth.admin.listUsers();
+    const existingUser = existingUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
-    // 2) Verify user visible (eventual consistency guard)
-    {
-      let ok = false;
-      for (let i = 0; i < 4; i++) {
-        const check = await admin.auth.admin.getUserById(userId);
-        if (check.data?.user?.id === userId) { ok = true; break; }
-        await sleep(150);
+    if (existingUser) {
+      // User already exists in auth, use their ID and update password
+      userId = existingUser.id;
+      userExists = true;
+
+      // Update the user's password
+      const updateResult = await admin.auth.admin.updateUserById(userId, {
+        password: password,
+        email_confirm: true,
+      });
+
+      if (updateResult.error) {
+        console.error('Failed to update existing user password:', updateResult.error);
       }
-      if (!ok) return NextResponse.json({ error: 'Auth user not visible yet; retry shortly', user_id: userId }, { status: 500 });
+
+      console.log('✓ Re-inviting existing auth user:', email);
+    } else {
+      // Create new auth user
+      const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+      if (created.error) return NextResponse.json({ error: created.error.message }, { status: 400 });
+
+      userId = created.data.user?.id;
+      if (!userId) return NextResponse.json({ error: 'No user id returned from createUser' }, { status: 500 });
+
+      // 2) Verify user visible (eventual consistency guard)
+      {
+        let ok = false;
+        for (let i = 0; i < 4; i++) {
+          const check = await admin.auth.admin.getUserById(userId);
+          if (check.data?.user?.id === userId) { ok = true; break; }
+          await sleep(150);
+        }
+        if (!ok) return NextResponse.json({ error: 'Auth user not visible yet; retry shortly', user_id: userId }, { status: 500 });
+      }
     }
 
     // 3) Create/update profile with first_name and last_name
@@ -84,12 +126,35 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* ignore if profiles table not present */ }
 
-    // 4) Link to org
-    const link = await admin
+    // 4) Link to org (or update if already exists)
+    // Check if membership already exists
+    const { data: existingMembership } = await admin
       .from('org_memberships')
-      .insert([{ org_id: orgId, user_id: userId, role: roleVal }])
-      .select('org_id, user_id, role')
-      .single();
+      .select('*')
+      .eq('org_id', orgId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    let link;
+    if (existingMembership) {
+      // Update existing membership
+      link = await admin
+        .from('org_memberships')
+        .update({ role: roleVal })
+        .eq('org_id', orgId)
+        .eq('user_id', userId)
+        .select('org_id, user_id, role')
+        .single();
+
+      console.log('✓ Updated existing org membership for user:', email);
+    } else {
+      // Create new membership
+      link = await admin
+        .from('org_memberships')
+        .insert([{ org_id: orgId, user_id: userId, role: roleVal }])
+        .select('org_id, user_id, role')
+        .single();
+    }
 
     if (link.error) {
       const code = (link.error as { code?: string } | undefined)?.code ?? '';
@@ -103,39 +168,68 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: link.error.message }, { status: 400 });
     }
 
-    // 5) Create plan if plan_tier is provided
+    // 5) Create or update plan if plan_tier is provided
     if (planTier && ['launch', 'elevate', 'maximize'].includes(planTier)) {
       const percentMap: Record<string, number> = { launch: 12, elevate: 18, maximize: 22 };
       const percent = percentMap[planTier];
 
-      const planData = {
-        org_id: orgId,
-        user_id: userId,
-        tier: planTier,
-        percent: percent,
-        effective_date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD
-      };
-
-      const planResult = await admin
+      // Check if plan already exists
+      const { data: existingPlan } = await admin
         .from('plans')
-        .insert([planData])
-        .select()
-        .single();
+        .select('*')
+        .eq('org_id', orgId)
+        .eq('user_id', userId)
+        .maybeSingle();
 
-      if (planResult.error) {
-        // Log error but don't fail the whole operation
-        console.error('Failed to create plan:', planResult.error);
+      if (existingPlan) {
+        // Update existing plan
+        const planResult = await admin
+          .from('plans')
+          .update({
+            tier: planTier,
+            percent: percent,
+            effective_date: new Date().toISOString().split('T')[0],
+          })
+          .eq('org_id', orgId)
+          .eq('user_id', userId)
+          .select()
+          .single();
+
+        if (planResult.error) {
+          console.error('Failed to update plan:', planResult.error);
+        } else {
+          console.log('✓ Updated existing plan for user:', email);
+        }
+      } else {
+        // Create new plan
+        const planData = {
+          org_id: orgId,
+          user_id: userId,
+          tier: planTier,
+          percent: percent,
+          effective_date: new Date().toISOString().split('T')[0],
+        };
+
+        const planResult = await admin
+          .from('plans')
+          .insert([planData])
+          .select()
+          .single();
+
+        if (planResult.error) {
+          console.error('Failed to create plan:', planResult.error);
+        }
       }
     }
 
     // 6) Send welcome email notification
     try {
       // Get org name
-      const { data: orgData } = await admin.from('organizations').select('name').eq('id', orgId).single();
+      const { data: orgData } = await admin.from('orgs').select('name').eq('id', orgId).maybeSingle();
       const orgName = orgData?.name || 'Your Organization';
 
       // Get inviter name
-      const { data: inviterProfile } = await admin.from('profiles').select('first_name, last_name').eq('id', user.id).single();
+      const { data: inviterProfile } = await admin.from('profiles').select('first_name, last_name').eq('id', user.id).maybeSingle();
       const inviterName = inviterProfile
         ? `${inviterProfile.first_name || ''} ${inviterProfile.last_name || ''}`.trim() || user.email || 'Your admin'
         : user.email || 'Your admin';
@@ -148,6 +242,9 @@ export async function POST(req: NextRequest) {
         organizationName: orgName,
         inviterName,
         orgId,
+        email: email,
+        temporaryPassword: password,
+        planTier: planTier || undefined,
       });
     } catch (emailError) {
       // Log error but don't fail the user creation

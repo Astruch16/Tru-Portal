@@ -14,7 +14,7 @@ function statusOf(s?: unknown) {
   return ['upcoming','completed','cancelled'].includes(v) ? v : 'upcoming';
 }
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ orgid?: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ orgid?: string }> }) {
   const { orgid } = await params;
   const orgId = uuidOf(orgid);
   if (!orgId) return NextResponse.json({ error: 'Bad org id' }, { status: 400 });
@@ -23,6 +23,39 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ org
   if (!url || !key) return NextResponse.json({ error: 'Supabase env missing' }, { status: 500 });
 
   const admin = createClient(url, key);
+
+  // Check if this request is from a member portal (has auth header)
+  const authHeader = req.headers.get('authorization');
+  if (authHeader) {
+    // Get user ID from auth token
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user } } = await admin.auth.getUser(token);
+
+    if (user) {
+      // Get properties assigned to this user
+      const { data: userProperties } = await admin
+        .from('user_properties')
+        .select('property_id')
+        .eq('user_id', user.id);
+
+      if (userProperties && userProperties.length > 0) {
+        const propertyIds = userProperties.map(up => up.property_id);
+
+        // Return only bookings for user's properties
+        const { data, error } = await admin
+          .from('bookings')
+          .select('*, properties(name)')
+          .eq('org_id', orgId)
+          .in('property_id', propertyIds)
+          .order('check_in', { ascending: false });
+
+        if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json({ ok: true, bookings: data ?? [] });
+      }
+    }
+  }
+
+  // Default: return all bookings (for admin)
   const { data, error } = await admin
     .from('bookings')
     .select('*, properties(name)')
@@ -75,7 +108,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ org
         recipientEmails: members.map(m => m.email),
         recipientName: members[0].name, // First member's name for personalization
         propertyName,
-        guestName: (data.guest_name as string) || 'Guest',
         checkIn: checkIn.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         checkOut: checkOut.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         nights,

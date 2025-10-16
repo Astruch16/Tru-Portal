@@ -19,31 +19,53 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   // Load invoice with plan details and organization info
   const { data: inv, error } = await admin
     .from('invoices')
-    .select('*, org:organizations(name)')
+    .select('*, org:orgs(name)')
     .eq('id', id)
     .maybeSingle();
 
   if (error) return new Response(`DB error: ${error.message}`, { status: 500 });
   if (!inv) return new Response(`Invoice not found for id=${id}`, { status: 404 });
 
-  // Get the owner/member name for "Bill To"
-  const { data: membership } = await admin
-    .from('org_memberships')
-    .select('user_id')
-    .eq('org_id', inv.org_id)
-    .eq('role', 'owner')
-    .maybeSingle();
-
+  // Get the member name for "Bill To" - use user_id from invoice if available
   let memberName = (inv as any).org?.name || 'Member';
-  if (membership) {
+
+  // If invoice has a user_id, use that user's name
+  const userIdForBilling = (inv as any).user_id;
+
+  if (userIdForBilling) {
     const { data: profile } = await admin
       .from('profiles')
-      .select('full_name')
-      .eq('id', (membership as { user_id: string }).user_id)
+      .select('first_name, last_name, full_name')
+      .eq('id', userIdForBilling)
       .maybeSingle();
 
-    if (profile?.full_name) {
-      memberName = profile.full_name;
+    if (profile) {
+      // Try full_name first, then first_name + last_name
+      memberName = profile.full_name ||
+                   [profile.first_name, profile.last_name].filter(Boolean).join(' ') ||
+                   memberName;
+    }
+  } else {
+    // Fallback: try to find owner if no user_id on invoice
+    const { data: membership } = await admin
+      .from('org_memberships')
+      .select('user_id')
+      .eq('org_id', inv.org_id)
+      .eq('role', 'owner')
+      .maybeSingle();
+
+    if (membership) {
+      const { data: profile } = await admin
+        .from('profiles')
+        .select('first_name, last_name, full_name')
+        .eq('id', (membership as { user_id: string }).user_id)
+        .maybeSingle();
+
+      if (profile) {
+        memberName = profile.full_name ||
+                     [profile.first_name, profile.last_name].filter(Boolean).join(' ') ||
+                     memberName;
+      }
     }
   }
 
