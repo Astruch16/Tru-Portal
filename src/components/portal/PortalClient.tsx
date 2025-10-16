@@ -514,7 +514,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
           <div className="mb-6">
             <button
               onClick={() => setIsPerformanceExpanded(!isPerformanceExpanded)}
-              className="w-full flex items-center gap-3 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2"
+              className="w-full flex items-center gap-3 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2 cursor-pointer"
             >
               <svg
                 className={`w-5 h-5 text-primary transition-transform duration-300 ${isPerformanceExpanded ? 'rotate-90' : ''}`}
@@ -619,7 +619,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
         <div className="mb-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
           <button
             onClick={() => setIsInvoicesExpanded(!isInvoicesExpanded)}
-            className="w-full flex items-center gap-3 mb-6 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2"
+            className="w-full flex items-center gap-3 mb-6 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2 cursor-pointer"
           >
             <svg
               className={`w-5 h-5 text-primary transition-transform duration-300 ${isInvoicesExpanded ? 'rotate-90' : ''}`}
@@ -802,7 +802,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
         <div className="mb-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
           <button
             onClick={() => setIsRevenueExpanded(!isRevenueExpanded)}
-            className="w-full flex items-center gap-3 mb-6 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2"
+            className="w-full flex items-center gap-3 mb-6 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2 cursor-pointer"
           >
             <svg
               className={`w-5 h-5 text-primary transition-transform duration-300 ${isRevenueExpanded ? 'rotate-90' : ''}`}

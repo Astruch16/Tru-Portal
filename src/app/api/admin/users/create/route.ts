@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, supabaseServer } from '@/lib/supabase/server';
+import { sendMemberInvitationEmail } from '@/lib/email';
 
 type Role = 'owner' | 'manager' | 'member';
 
@@ -125,6 +126,32 @@ export async function POST(req: NextRequest) {
         // Log error but don't fail the whole operation
         console.error('Failed to create plan:', planResult.error);
       }
+    }
+
+    // 6) Send welcome email notification
+    try {
+      // Get org name
+      const { data: orgData } = await admin.from('organizations').select('name').eq('id', orgId).single();
+      const orgName = orgData?.name || 'Your Organization';
+
+      // Get inviter name
+      const { data: inviterProfile } = await admin.from('profiles').select('first_name, last_name').eq('id', user.id).single();
+      const inviterName = inviterProfile
+        ? `${inviterProfile.first_name || ''} ${inviterProfile.last_name || ''}`.trim() || user.email || 'Your admin'
+        : user.email || 'Your admin';
+
+      const recipientName = `${firstName} ${lastName}`.trim() || email.split('@')[0];
+
+      await sendMemberInvitationEmail({
+        recipientEmail: email,
+        recipientName,
+        organizationName: orgName,
+        inviterName,
+        orgId,
+      });
+    } catch (emailError) {
+      // Log error but don't fail the user creation
+      console.error('Failed to send welcome email:', emailError);
     }
 
     return NextResponse.json({ ok: true, user: { id: userId, email }, membership: link.data });

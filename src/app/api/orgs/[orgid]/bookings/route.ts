@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getOrgMemberEmails, sendNewBookingEmail } from '@/lib/email';
 export const runtime = 'nodejs';
 
 function uuidOf(s?: string | null) {
@@ -56,10 +57,35 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ org
   const { data, error } = await admin
     .from('bookings')
     .insert([{ org_id: orgId, property_id, check_in, check_out, status }])
-    .select('*')
+    .select('*, properties(name)')
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  // Send email notifications to all org members
+  try {
+    const members = await getOrgMemberEmails(orgId);
+    if (members.length > 0) {
+      const propertyName = (data.properties as any)?.name || 'Unknown Property';
+      const checkIn = new Date(data.check_in as string);
+      const checkOut = new Date(data.check_out as string);
+      const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+
+      await sendNewBookingEmail({
+        recipientEmails: members.map(m => m.email),
+        recipientName: members[0].name, // First member's name for personalization
+        propertyName,
+        guestName: (data.guest_name as string) || 'Guest',
+        checkIn: checkIn.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        checkOut: checkOut.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        nights,
+        orgId,
+      });
+    }
+  } catch (emailError) {
+    console.error('Failed to send booking notification email:', emailError);
+  }
+
   return NextResponse.json({ ok: true, booking: data });
 }
 
