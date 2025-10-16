@@ -11,7 +11,7 @@ function uuidOf(s?: string | null) {
 function isDate(s?: unknown) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s); }
 function statusOf(s?: unknown) {
   const v = typeof s === 'string' ? s.toLowerCase() : '';
-  return ['confirmed','completed','cancelled','pending'].includes(v) ? v : 'confirmed';
+  return ['upcoming','completed','cancelled'].includes(v) ? v : 'upcoming';
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ orgid?: string }> }) {
