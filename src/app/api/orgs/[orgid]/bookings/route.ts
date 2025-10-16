@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getOrgMemberEmails, sendNewBookingEmail } from '@/lib/email';
+import { getPropertyMemberEmails, sendNewBookingEmail } from '@/lib/email';
 export const runtime = 'nodejs';
 
 function uuidOf(s?: string | null) {
@@ -62,9 +62,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ org
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  // Send email notifications to all org members
+  // Send email notifications to members assigned to this property
   try {
-    const members = await getOrgMemberEmails(orgId);
+    const members = await getPropertyMemberEmails(property_id);
     if (members.length > 0) {
       const propertyName = (data.properties as any)?.name || 'Unknown Property';
       const checkIn = new Date(data.check_in as string);

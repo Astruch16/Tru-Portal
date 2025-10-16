@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getOrgMemberEmails, sendNewReceiptEmail } from '@/lib/email';
+import { getPropertyMemberEmails, sendNewReceiptEmail } from '@/lib/email';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -133,9 +133,9 @@ export async function POST(
       }, { status: 500 });
     }
 
-    // Send email notifications to all org members
+    // Send email notifications to members assigned to this property
     try {
-      const members = await getOrgMemberEmails(orgId);
+      const members = await getPropertyMemberEmails(propertyId);
       if (members.length > 0) {
         // Get property name
         const { data: propertyData } = await admin.from('properties').select('name').eq('id', propertyId).single();

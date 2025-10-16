@@ -225,3 +225,38 @@ export async function getOrgMemberEmails(orgId: string): Promise<Array<{ email: 
 
   return memberEmails;
 }
+
+// Helper function to get member emails for a specific property
+export async function getPropertyMemberEmails(propertyId: string): Promise<Array<{ email: string; name: string }>> {
+  const { createClient } = await import('@supabase/supabase-js');
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+  const admin = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { persistSession: false }
+  });
+
+  // Get users assigned to this property
+  const { data: userProperties } = await admin
+    .from('user_properties')
+    .select('user_id')
+    .eq('property_id', propertyId);
+
+  if (!userProperties || userProperties.length === 0) {
+    return [];
+  }
+
+  const userIds = userProperties.map(up => up.user_id);
+
+  // Get user emails from auth.users
+  const { data: users } = await admin.auth.admin.listUsers();
+
+  const memberEmails = users.users
+    .filter(user => userIds.includes(user.id))
+    .map(user => ({
+      email: user.email!,
+      name: user.user_metadata?.full_name || user.email!.split('@')[0],
+    }));
+
+  return memberEmails;
+}
