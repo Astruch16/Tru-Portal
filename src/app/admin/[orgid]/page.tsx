@@ -113,7 +113,15 @@ export default function AdminPage() {
   // --- Receipt state ---
   const [receiptPropertyId, setReceiptPropertyId] = useState('');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptCategory, setReceiptCategory] = useState('');
+  const [receiptMonth, setReceiptMonth] = useState('');
+  const [receiptNote, setReceiptNote] = useState('');
   const [busyReceipt, setBusyReceipt] = useState(false);
+  const [receipts, setReceipts] = useState<any[]>([]);
+  const [loadingReceipts, setLoadingReceipts] = useState(false);
+  const [receiptFilterCategory, setReceiptFilterCategory] = useState('all');
+  const [receiptFilterMonth, setReceiptFilterMonth] = useState('all');
+  const [receiptFilterProperty, setReceiptFilterProperty] = useState('all');
 
   // --- User modal state ---
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
@@ -308,6 +316,7 @@ export default function AdminPage() {
       fetchBookings();
       fetchInvoices();
       fetchLedgerEntries();
+      fetchReceipts();
     }
   }, [orgId]);
 
@@ -667,16 +676,44 @@ export default function AdminPage() {
   }
 
   // --- Receipt actions ---
+  async function fetchReceipts() {
+    setLoadingReceipts(true);
+    try {
+      const res = await fetch(`/api/orgs/${orgId}/receipts`);
+      const j = await res.json();
+      if (j.ok) {
+        setReceipts(j.receipts || []);
+      }
+    } catch (e) {
+      console.error('Error fetching receipts:', e);
+    } finally {
+      setLoadingReceipts(false);
+    }
+  }
+
   async function uploadReceipt() {
     if (!receiptPropertyId || !receiptFile) {
       setMsg('Please select a property and a file');
+      return;
+    }
+    if (!receiptCategory) {
+      setMsg('Please select a category');
+      return;
+    }
+    if (!receiptMonth) {
+      setMsg('Please select a month');
       return;
     }
     setBusyReceipt(true); setMsg('Uploading receipt…');
     try {
       const formData = new FormData();
       formData.append('file', receiptFile);
-      formData.append('property_id', receiptPropertyId);
+      formData.append('propertyId', receiptPropertyId);
+      formData.append('description', receiptCategory);
+      formData.append('receiptDate', `${receiptMonth}-01`); // Use first day of the month
+      if (receiptNote) {
+        formData.append('note', receiptNote);
+      }
 
       const res = await fetch(`/api/orgs/${orgId}/receipts/upload`, {
         method: 'POST',
@@ -687,6 +724,10 @@ export default function AdminPage() {
         setMsg('✓ Receipt uploaded');
         setReceiptPropertyId('');
         setReceiptFile(null);
+        setReceiptCategory('');
+        setReceiptMonth('');
+        setReceiptNote('');
+        fetchReceipts(); // Refresh receipts list
       } else {
         setMsg(`Error: ${j.error || 'Failed to upload receipt'}`);
       }
@@ -694,6 +735,25 @@ export default function AdminPage() {
       setMsg(`Network error: ${(e as Error).message}`);
     } finally {
       setBusyReceipt(false);
+    }
+  }
+
+  async function deleteReceipt(receiptId: string) {
+    if (!confirm('Delete this receipt?')) return;
+
+    try {
+      const res = await fetch(`/api/orgs/${orgId}/receipts?receiptId=${receiptId}`, {
+        method: 'DELETE',
+      });
+      const j = await res.json();
+      if (j.ok) {
+        setMsg('✓ Receipt deleted');
+        fetchReceipts(); // Refresh receipts list
+      } else {
+        setMsg(`Error: ${j.error || 'Failed to delete receipt'}`);
+      }
+    } catch (e) {
+      setMsg(`Network error: ${(e as Error).message}`);
     }
   }
 
@@ -2332,6 +2392,81 @@ export default function AdminPage() {
 
                     <Separator />
 
+                    {/* Category Selection */}
+                    <div className="space-y-2">
+                      <Label htmlFor="receipt-category" className="text-sm font-medium flex items-center gap-2">
+                        <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        Category
+                      </Label>
+                      <select
+                        id="receipt-category"
+                        value={receiptCategory}
+                        onChange={(e) => setReceiptCategory(e.target.value)}
+                        className="flex h-11 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 cursor-pointer"
+                      >
+                        <option value="">Choose a category...</option>
+                        <option value="Cleanings">Cleanings</option>
+                        <option value="Repairs">Repairs</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Restocks">Restocks</option>
+                        <option value="Photography">Photography</option>
+                      </select>
+                    </div>
+
+                    <Separator />
+
+                    {/* Month/Year Selection */}
+                    <div className="space-y-2">
+                      <Label htmlFor="receipt-month" className="text-sm font-medium flex items-center gap-2">
+                        <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Month & Year
+                      </Label>
+                      <select
+                        id="receipt-month"
+                        value={receiptMonth}
+                        onChange={(e) => setReceiptMonth(e.target.value)}
+                        className="flex h-11 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 cursor-pointer"
+                      >
+                        <option value="">Choose a month...</option>
+                        {(() => {
+                          const months = [];
+                          const today = new Date();
+                          for (let i = 0; i < 24; i++) {
+                            const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                            if (date.getFullYear() < 2025) continue;
+                            const monthStr = date.toISOString().slice(0, 7);
+                            const displayStr = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                            months.push(<option key={monthStr} value={monthStr}>{displayStr}</option>);
+                          }
+                          return months;
+                        })()}
+                      </select>
+                    </div>
+
+                    {/* Note/Description Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="receipt-note" className="text-sm font-medium flex items-center gap-2">
+                        <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Note (Optional)
+                      </Label>
+                      <textarea
+                        id="receipt-note"
+                        value={receiptNote}
+                        onChange={(e) => setReceiptNote(e.target.value)}
+                        placeholder="Add a note about this receipt (e.g., 'Broken window repair', 'Monthly deep clean', etc.)"
+                        rows={3}
+                        className="flex w-full rounded-lg border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 resize-none"
+                      />
+                    </div>
+
+                    <Separator />
+
                     {/* File Upload Area */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium flex items-center gap-2">
@@ -2387,7 +2522,7 @@ export default function AdminPage() {
                     {/* Upload Button */}
                     <Button
                       onClick={uploadReceipt}
-                      disabled={busyReceipt || !receiptPropertyId || !receiptFile}
+                      disabled={busyReceipt || !receiptPropertyId || !receiptFile || !receiptCategory || !receiptMonth}
                       className="w-full h-11 cursor-pointer transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
                       size="lg"
                     >
@@ -2421,6 +2556,195 @@ export default function AdminPage() {
                   </div>
                 </Card>
               </div>
+            </div>
+          </CollapsibleSection>
+
+          {/* Receipt Organizer Section */}
+          <CollapsibleSection
+            title="Receipt Organizer"
+            description="View and manage all receipts"
+            icon={
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+            }
+          >
+            <div className="space-y-6">
+              {/* Filters */}
+              <Card className="border-border/50">
+                <div className="p-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="receipt-filter-property" className="text-sm font-medium mb-2 block">
+                        Filter by Property
+                      </Label>
+                      <select
+                        id="receipt-filter-property"
+                        value={receiptFilterProperty}
+                        onChange={(e) => setReceiptFilterProperty(e.target.value)}
+                        className="flex h-10 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 cursor-pointer"
+                      >
+                        <option value="all">All Properties</option>
+                        {properties.map(prop => (
+                          <option key={prop.id} value={prop.id}>{prop.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <Label htmlFor="receipt-filter" className="text-sm font-medium mb-2 block">
+                        Filter by Category
+                      </Label>
+                      <select
+                        id="receipt-filter"
+                        value={receiptFilterCategory}
+                        onChange={(e) => setReceiptFilterCategory(e.target.value)}
+                        className="flex h-10 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 cursor-pointer"
+                      >
+                        <option value="all">All Categories</option>
+                        <option value="Cleanings">Cleanings</option>
+                        <option value="Repairs">Repairs</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Restocks">Restocks</option>
+                        <option value="Photography">Photography</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label htmlFor="receipt-month-filter" className="text-sm font-medium mb-2 block">
+                        Filter by Month
+                      </Label>
+                      <select
+                        id="receipt-month-filter"
+                        value={receiptFilterMonth}
+                        onChange={(e) => setReceiptFilterMonth(e.target.value)}
+                        className="flex h-10 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 cursor-pointer"
+                      >
+                        <option value="all">All Months</option>
+                        {(() => {
+                          const months = [];
+                          const today = new Date();
+                          for (let i = 0; i < 24; i++) {
+                            const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                            if (date.getFullYear() < 2025) continue;
+                            const monthStr = date.toISOString().slice(0, 7);
+                            const displayStr = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                            months.push(<option key={monthStr} value={monthStr}>{displayStr}</option>);
+                          }
+                          return months;
+                        })()}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Receipts List */}
+              <Card className="border-border/50">
+                <div className="p-6 space-y-4">
+                  {loadingReceipts ? (
+                    <p className="text-center py-8 text-muted-foreground">Loading receipts...</p>
+                  ) : receipts.length === 0 ? (
+                    <p className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                      No receipts uploaded yet
+                    </p>
+                  ) : (() => {
+                    // Apply filters
+                    let filteredReceipts = receipts;
+
+                    // Property filter
+                    if (receiptFilterProperty !== 'all') {
+                      filteredReceipts = filteredReceipts.filter(r =>
+                        r.property_id === receiptFilterProperty
+                      );
+                    }
+
+                    // Category filter
+                    if (receiptFilterCategory !== 'all') {
+                      filteredReceipts = filteredReceipts.filter(r =>
+                        r.description?.toLowerCase() === receiptFilterCategory.toLowerCase()
+                      );
+                    }
+
+                    // Month filter
+                    if (receiptFilterMonth !== 'all') {
+                      filteredReceipts = filteredReceipts.filter(r => {
+                        if (!r.receipt_date) return false;
+                        const receiptMonth = r.receipt_date.slice(0, 7); // Extract YYYY-MM
+                        return receiptMonth === receiptFilterMonth;
+                      });
+                    }
+
+                    return filteredReceipts.length === 0 ? (
+                      <p className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                        No receipts found for selected filters
+                      </p>
+                    ) : (
+                      <div className="grid gap-4">
+                        {filteredReceipts.map((receipt: any) => (
+                          <Card key={receipt.id} className="border-border hover:shadow-md transition-shadow">
+                            <div className="p-4">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold">{receipt.file_name}</span>
+                                    {receipt.mime_type?.includes('pdf') && (
+                                      <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded">PDF</span>
+                                    )}
+                                    {receipt.mime_type?.includes('image') && (
+                                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Image</span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground space-y-1">
+                                    <div>Property: {properties.find(p => p.id === receipt.property_id)?.name || 'Unknown'}</div>
+                                    {receipt.receipt_date && (
+                                      <div>Month: <span className="font-medium">{(() => {
+                                        // Parse YYYY-MM-DD and create date in local timezone to avoid UTC issues
+                                        const [year, month] = receipt.receipt_date.split('-').map(Number);
+                                        const date = new Date(year, month - 1, 15); // Use 15th to avoid timezone edge cases
+                                        return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                                      })()}</span></div>
+                                    )}
+                                    <div>Uploaded: {new Date(receipt.date_added).toLocaleDateString()}</div>
+                                    {receipt.description && (
+                                      <div>Category: <span className="font-medium text-primary">{receipt.description}</span></div>
+                                    )}
+                                    {receipt.note && (
+                                      <div>Note: <span className="font-medium text-foreground">{receipt.note}</span></div>
+                                    )}
+                                    {receipt.amount_cents !== null && (
+                                      <div>Amount: ${(receipt.amount_cents / 100).toFixed(2)}</div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.open(receipt.file_url, '_blank')}
+                                  >
+                                    <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    Download
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => deleteReceipt(receipt.id)}
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </Card>
             </div>
           </CollapsibleSection>
 

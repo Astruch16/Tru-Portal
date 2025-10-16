@@ -24,6 +24,7 @@ export async function POST(
     const receiptDate = formData.get('receiptDate') as string | null;
     const amountCents = formData.get('amountCents') as string | null;
     const description = formData.get('description') as string | null;
+    const note = formData.get('note') as string | null;
 
     if (!file) {
       return NextResponse.json({ ok: false, error: 'No file provided' }, { status: 400 });
@@ -88,9 +89,11 @@ export async function POST(
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
+      console.error('Upload error details:', JSON.stringify(uploadError, null, 2));
+      console.error('Attempted fileName:', fileName);
       return NextResponse.json({
         ok: false,
-        error: 'Failed to upload file to storage'
+        error: `Failed to upload file to storage: ${uploadError.message || JSON.stringify(uploadError)}`
       }, { status: 500 });
     }
 
@@ -113,6 +116,7 @@ export async function POST(
         receipt_date: receiptDate || null,
         amount_cents: amountCents ? parseInt(amountCents, 10) : null,
         description: description || null,
+        note: note || null,
         date_added: new Date().toISOString()
       })
       .select()

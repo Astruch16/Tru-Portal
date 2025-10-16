@@ -19,6 +19,7 @@ type Receipt = {
   receipt_date: string | null;
   amount_cents: number | null;
   description: string | null;
+  note?: string | null;
 };
 
 type Property = {
@@ -439,15 +440,23 @@ export default function ReceiptsModal({
                                 </div>
                                 <div className="text-xs text-muted-foreground space-y-1">
                                   <div>Property: {getPropertyName(receipt.property_id)}</div>
-                                  <div>Uploaded: {new Date(receipt.date_added).toLocaleDateString()}</div>
                                   {receipt.receipt_date && (
-                                    <div>Receipt Date: {new Date(receipt.receipt_date).toLocaleDateString()}</div>
+                                    <div>Month: <span className="font-medium">{(() => {
+                                      // Parse YYYY-MM-DD and create date in local timezone to avoid UTC issues
+                                      const [year, month] = receipt.receipt_date.split('-').map(Number);
+                                      const date = new Date(year, month - 1, 15); // Use 15th to avoid timezone edge cases
+                                      return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                                    })()}</span></div>
                                   )}
+                                  <div>Uploaded: {new Date(receipt.date_added).toLocaleDateString()}</div>
                                   {receipt.amount_cents !== null && (
                                     <div>Amount: {formatMoney(receipt.amount_cents)}</div>
                                   )}
                                   {receipt.description && (
-                                    <div>Note: {receipt.description}</div>
+                                    <div>Category: <span className="font-medium text-primary">{receipt.description}</span></div>
+                                  )}
+                                  {receipt.note && (
+                                    <div>Note: <span className="font-medium text-foreground">{receipt.note}</span></div>
                                   )}
                                 </div>
                               </div>

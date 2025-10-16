@@ -37,24 +37,25 @@ export async function GET(
       query = query.eq('property_id', extractUUID(propertyId));
     }
 
-    // Filter by month if specified
+    // Filter by month if specified (using receipt_date, not date_added)
     if (month) {
+      // month is in format YYYY-MM, we need to match against receipt_date (DATE type)
+      // Convert the DATE column to text to do pattern matching
       const [year, monthNum] = month.split('-').map(Number);
-      const startDate = new Date(year, monthNum - 1, 1);
-      const endDate = new Date(year, monthNum, 0, 23, 59, 59);
+      const startDate = `${year}-${String(monthNum).padStart(2, '0')}-01`;
+      const endDate = new Date(year, monthNum, 0).toISOString().split('T')[0]; // Last day of month
 
-      query = query
-        .gte('date_added', startDate.toISOString())
-        .lte('date_added', endDate.toISOString());
+      query = query.gte('receipt_date', startDate).lte('receipt_date', endDate);
     }
 
     const { data: receipts, error } = await query;
 
     if (error) {
       console.error('Fetch receipts error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       return NextResponse.json({
         ok: false,
-        error: 'Failed to fetch receipts'
+        error: `Failed to fetch receipts: ${error.message || JSON.stringify(error)}`
       }, { status: 500 });
     }
 
