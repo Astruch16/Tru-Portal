@@ -1,0 +1,54 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+export const runtime = 'nodejs';
+
+function extractUuid(s: string | undefined): string | null {
+  if (!s) return null;
+  const m = s.match(/[0-9a-fA-F-]{36}/);
+  return m ? m[0].toLowerCase() : null;
+}
+
+export async function GET(req: NextRequest, { params }: { params: Promise<{ orgid?: string }> }) {
+  const { orgid } = await params;
+  const orgId = extractUuid(orgid);
+
+  if (!orgId) {
+    return NextResponse.json({ error: 'Invalid org id' }, { status: 400 });
+  }
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: 'Supabase env missing' }, { status: 500 });
+  }
+
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  // Fetch all payments for invoices belonging to this org
+  const { data: payments, error } = await admin
+    .from('invoice_payments')
+    .select(`
+      *,
+      invoice:invoices!inner(
+        id,
+        invoice_number,
+        bill_month,
+        org_id,
+        property_id,
+        property:properties(
+          id,
+          name
+        )
+      )
+    `)
+    .eq('invoice.org_id', orgId)
+    .order('payment_date', { ascending: false });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  return NextResponse.json({ ok: true, payments: payments || [] });
+}

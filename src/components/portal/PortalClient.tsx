@@ -58,6 +58,7 @@ interface PortalClientProps {
 }
 
 export default function PortalClient({ orgId, month, kpi, invoices, plan, properties }: PortalClientProps) {
+  console.log('PortalClient - Plan received:', plan);
   const pathname = usePathname();
   const router = useRouter();
   const isProfilePage = pathname?.includes('/profile');
@@ -82,14 +83,15 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
   const [annualKpis, setAnnualKpis] = useState<KPI[]>([]);
   const [loadingAnnual, setLoadingAnnual] = useState(false);
 
-  // Generate month options (last 12 months)
+  // Generate month options (January to December of current year)
   const generateMonthOptions = () => {
     const months = [];
-    const today = new Date();
+    const currentYear = new Date().getFullYear();
     for (let i = 0; i < 12; i++) {
-      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const monthStr = date.toISOString().slice(0, 7);
-      months.push(monthStr);
+      const monthStr = `${currentYear}-${String(i + 1).padStart(2, '0')}`;
+      const date = new Date(currentYear, i, 1);
+      const monthName = date.toLocaleDateString('en-US', { month: 'long' });
+      months.push({ value: monthStr, label: monthName });
     }
     return months;
   };
@@ -335,12 +337,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F8F6F2] via-[#E1ECDB]/20 to-[#E1ECDB]/40 relative">
-      {/* Geometric pattern overlay */}
-      <div className="fixed inset-0 opacity-[0.15] pointer-events-none" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23E1ECDB' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        backgroundSize: '60px 60px'
-      }}></div>
+    <div className="min-h-screen bg-[#F8F6F2] relative">
 
       {/* Header */}
       <div className="bg-white border-b border-border shadow-sm relative">
@@ -478,11 +475,11 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 <select
                   value={month}
                   onChange={(e) => handleMonthChange(e.target.value)}
-                  className="h-8 rounded-md border border-border bg-background px-3 text-sm font-semibold tabular-nums shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
+                  className="h-8 rounded-md border border-border bg-background px-3 text-sm font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
                 >
                   {monthOptions.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
+                    <option key={m.value} value={m.value}>
+                      {m.label}
                     </option>
                   ))}
                 </select>
@@ -518,7 +515,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 Performance Metrics
               </h2>
               {viewMode === 'annual' && (
-                <Badge className="bg-[#9db896] text-white border-[#9db896] font-semibold">
+                <Badge className="bg-primary text-primary-foreground font-semibold capitalize hover:bg-primary/90">
                   Year to Date {new Date().getFullYear()}
                 </Badge>
               )}

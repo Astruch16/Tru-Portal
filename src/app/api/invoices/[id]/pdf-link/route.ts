@@ -3,9 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // sanitize & validate id (tolerate stray quotes/brackets/spaces)
-  const raw = params.id ?? '';
+  const { id: rawId } = await params;
+  const raw = rawId ?? '';
   const id = raw.replace(/[<>"'\s]/g, '');
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
     return NextResponse.json({ error: `Bad invoice id: "${raw}"` }, { status: 400 });

@@ -200,3 +200,193 @@ button:active {
     background-position: 100% 100%;
   }
 }
+
+/* Floating animation for background elements */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  33% {
+    transform: translateY(-30px) translateX(20px);
+  }
+  66% {
+    transform: translateY(15px) translateX(-15px);
+  }
+}
+
+.animate-float {
+  animation: float 20s ease-in-out infinite;
+}
+
+/* Custom Scrollbar Styling - Elegant Sage Green Theme */
+/* For Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F8F6F2;
+  border-radius: 12px;
+  margin: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #E1ECDB;
+  border-radius: 12px;
+  border: 2px solid #F8F6F2;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9db896;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+  border-radius: 12px;
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #E1ECDB #F8F6F2;
+}
+
+/* Modal-specific scrollbar styling - seamlessly integrated */
+.modal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(157, 184, 150, 0.3) transparent;
+}
+
+.modal-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.modal-scrollbar::-webkit-scrollbar-button {
+  width: 0px;
+  height: 0px;
+  display: none;
+}
+
+.modal-scrollbar::-webkit-scrollbar-track {
+  background: rgba(248, 246, 242, 0.5);
+  border-radius: 0;
+  margin: 0;
+}
+
+.modal-scrollbar::-webkit-scrollbar-track-piece {
+  background: rgba(248, 246, 242, 0.5);
+  border-radius: 0;
+  margin: 0;
+}
+
+.modal-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(157, 184, 150, 0.4);
+  border-radius: 0;
+  border: 2px solid rgba(248, 246, 242, 0.5);
+  transition: background 0.2s ease;
+}
+
+.modal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(157, 184, 150, 0.6);
+}
+
+.modal-scrollbar::-webkit-scrollbar-corner {
+  background: rgba(248, 246, 242, 0.5);
+}
+
+/* Fallback for other modal scrollbars */
+[role="dialog"] ::-webkit-scrollbar,
+.modal-content ::-webkit-scrollbar,
+.fixed.inset-0 ::-webkit-scrollbar,
+[class*="overflow-auto"] ::-webkit-scrollbar,
+[class*="overflow-y-auto"] ::-webkit-scrollbar,
+[class*="rounded-2xl"] ::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+[role="dialog"] ::-webkit-scrollbar-button,
+.modal-content ::-webkit-scrollbar-button,
+.fixed.inset-0 ::-webkit-scrollbar-button,
+[class*="overflow-auto"] ::-webkit-scrollbar-button,
+[class*="overflow-y-auto"] ::-webkit-scrollbar-button,
+[class*="rounded-2xl"] ::-webkit-scrollbar-button {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+[role="dialog"] ::-webkit-scrollbar-button:start:decrement,
+.modal-content ::-webkit-scrollbar-button:start:decrement,
+.fixed.inset-0 ::-webkit-scrollbar-button:start:decrement,
+[class*="overflow-auto"] ::-webkit-scrollbar-button:start:decrement,
+[class*="overflow-y-auto"] ::-webkit-scrollbar-button:start:decrement,
+[class*="rounded-2xl"] ::-webkit-scrollbar-button:start:decrement,
+[role="dialog"] ::-webkit-scrollbar-button:end:increment,
+.modal-content ::-webkit-scrollbar-button:end:increment,
+.fixed.inset-0 ::-webkit-scrollbar-button:end:increment,
+[class*="overflow-auto"] ::-webkit-scrollbar-button:end:increment,
+[class*="overflow-y-auto"] ::-webkit-scrollbar-button:end:increment,
+[class*="rounded-2xl"] ::-webkit-scrollbar-button:end:increment {
+  width: 0 !important;
+  height: 0 !important;
+  display: block !important;
+  background: transparent !important;
+}
+
+[role="dialog"] ::-webkit-scrollbar-track-piece,
+.modal-content ::-webkit-scrollbar-track-piece,
+.fixed.inset-0 ::-webkit-scrollbar-track-piece,
+[class*="overflow-auto"] ::-webkit-scrollbar-track-piece,
+[class*="overflow-y-auto"] ::-webkit-scrollbar-track-piece,
+[class*="rounded-2xl"] ::-webkit-scrollbar-track-piece {
+  background: transparent !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+}
+
+[role="dialog"] ::-webkit-scrollbar-track,
+.modal-content ::-webkit-scrollbar-track,
+.fixed.inset-0 ::-webkit-scrollbar-track,
+[class*="overflow-auto"] ::-webkit-scrollbar-track,
+[class*="overflow-y-auto"] ::-webkit-scrollbar-track,
+[class*="rounded-2xl"] ::-webkit-scrollbar-track {
+  background: transparent !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+[role="dialog"] ::-webkit-scrollbar-thumb,
+.modal-content ::-webkit-scrollbar-thumb,
+.fixed.inset-0 ::-webkit-scrollbar-thumb,
+[class*="overflow-auto"] ::-webkit-scrollbar-thumb,
+[class*="overflow-y-auto"] ::-webkit-scrollbar-thumb,
+[class*="rounded-2xl"] ::-webkit-scrollbar-thumb {
+  background: rgba(157, 184, 150, 0.3) !important;
+  border-radius: 0 !important;
+  border: none !important;
+  transition: background 0.2s ease !important;
+}
+
+[role="dialog"] ::-webkit-scrollbar-thumb:hover,
+.modal-content ::-webkit-scrollbar-thumb:hover,
+.fixed.inset-0 ::-webkit-scrollbar-thumb:hover,
+[class*="overflow-auto"] ::-webkit-scrollbar-thumb:hover,
+[class*="overflow-y-auto"] ::-webkit-scrollbar-thumb:hover,
+[class*="rounded-2xl"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(157, 184, 150, 0.5) !important;
+}
+
+[role="dialog"] ::-webkit-scrollbar-corner,
+.modal-content ::-webkit-scrollbar-corner,
+.fixed.inset-0 ::-webkit-scrollbar-corner,
+[class*="overflow-auto"] ::-webkit-scrollbar-corner,
+[class*="overflow-y-auto"] ::-webkit-scrollbar-corner,
+[class*="rounded-2xl"] ::-webkit-scrollbar-corner {
+  background: transparent !important;
+}

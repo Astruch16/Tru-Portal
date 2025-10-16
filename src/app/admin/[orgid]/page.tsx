@@ -38,6 +38,9 @@ export default function AdminPage() {
   // --- Payments state ---
   const [invoiceId, setInvoiceId] = useState('');
   const [amount, setAmount] = useState('0');
+  const [payments, setPayments] = useState<any[]>([]);
+  const [paymentPropertyFilter, setPaymentPropertyFilter] = useState<string>('all');
+  const [paymentDateFilter, setPaymentDateFilter] = useState<string>('all');
 
   // --- Invite state ---
   const [inviteEmail, setInviteEmail] = useState('');
@@ -55,11 +58,16 @@ export default function AdminPage() {
   const [propertyAirbnbLink, setPropertyAirbnbLink] = useState('');
   const [properties, setProperties] = useState<any[]>([]);
   const [busyProperty, setBusyProperty] = useState(false);
+  const [isAllPropertiesExpanded, setIsAllPropertiesExpanded] = useState(true);
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>('all');
+  const [expandedPropertyTypes, setExpandedPropertyTypes] = useState<Set<string>>(new Set());
 
   // --- Assign Property state ---
   const [selectedPropertyId, setSelectedPropertyId] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
   const [users, setUsers] = useState<any[]>([]);
+  const [isAllUsersExpanded, setIsAllUsersExpanded] = useState(true);
+  const [userPlanFilter, setUserPlanFilter] = useState<string>('all');
 
   // --- Booking state ---
   const [bookingPropertyId, setBookingPropertyId] = useState('');
@@ -72,13 +80,21 @@ export default function AdminPage() {
   // --- Booking filters ---
   const [bookingFilterProperty, setBookingFilterProperty] = useState<string>('all');
   const [bookingFilterStatus, setBookingFilterStatus] = useState<string>('all');
+
+  // --- Invoice generation ---
+  const [invoicePropertyId, setInvoicePropertyId] = useState<string>('');
   const [bookingFilterMonth, setBookingFilterMonth] = useState<string>('all');
   const [bookingSortBy, setBookingSortBy] = useState<'date-asc' | 'date-desc' | 'property'>('date-desc');
+  const [isAllBookingsExpanded, setIsAllBookingsExpanded] = useState(true);
+  const [expandedBookingProperties, setExpandedBookingProperties] = useState<Set<string>>(new Set());
 
   // --- Invoice list state ---
   const [invoices, setInvoices] = useState<any[]>([]);
   const [invoiceFilterMonth, setInvoiceFilterMonth] = useState<string>('all');
+  const [invoiceFilterProperty, setInvoiceFilterProperty] = useState<string>('all');
   const [invoiceGroupBy, setInvoiceGroupBy] = useState<'month' | 'property'>('month');
+  const [isAllInvoicesExpanded, setIsAllInvoicesExpanded] = useState(true);
+  const [expandedInvoiceGroups, setExpandedInvoiceGroups] = useState<Set<string>>(new Set());
 
   // --- Revenue/Expense state ---
   const [ledgerPropertyId, setLedgerPropertyId] = useState('');
@@ -90,6 +106,9 @@ export default function AdminPage() {
   const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
   const [ledgerGroupBy, setLedgerGroupBy] = useState<'month' | 'property'>('month');
   const [ledgerFilterMonth, setLedgerFilterMonth] = useState<string>('all');
+  const [ledgerFilterProperty, setLedgerFilterProperty] = useState<string>('all');
+  const [isAllEntriesExpanded, setIsAllEntriesExpanded] = useState(true);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // --- Receipt state ---
   const [receiptPropertyId, setReceiptPropertyId] = useState('');
@@ -111,16 +130,23 @@ export default function AdminPage() {
     if (!orgId) { setMsg('Missing org id in the URL: visit /admin/<ORG_ID>'); return; }
     setMsg('Generating…');
     try {
+      const body: { month: string; property_id?: string } = { month };
+      if (invoicePropertyId) {
+        body.property_id = invoicePropertyId;
+      }
+
       const res = await fetch(`/api/orgs/${orgId}/invoices/generate`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ month }),
+        body: JSON.stringify(body),
       });
       let jUnknown: unknown = null;
       try { jUnknown = await res.json(); } catch {}
       const j = (jUnknown && typeof jUnknown === 'object') ? (jUnknown as Record<string, unknown>) : {};
       if (!res.ok) { setMsg(`Error ${res.status}: ${(j['error'] as string) || 'Failed to generate'}`); return; }
       const inv = j['invoice'] as { id?: string } | undefined;
-      setMsg(`✓ Generated invoice: ${inv?.id || '(no id)'}`);
+      const propertyName = invoicePropertyId ? properties.find(p => p.id === invoicePropertyId)?.name : 'all properties';
+      setMsg(`✓ Generated invoice for ${propertyName}: ${inv?.id || '(no id)'}`);
+      await fetchInvoices();
     } catch (e) { setMsg(`Network error: ${(e as Error).message}`); }
   }
 
@@ -128,9 +154,14 @@ export default function AdminPage() {
     if (!orgId) { setMsg('Missing org id in the URL: visit /admin/<ORG_ID>'); return; }
     setMsg('Preparing PDF…');
     try {
+      const body: { month: string; property_id?: string } = { month };
+      if (invoicePropertyId) {
+        body.property_id = invoicePropertyId;
+      }
+
       const genRes = await fetch(`/api/orgs/${orgId}/invoices/generate`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ month }),
+        body: JSON.stringify(body),
       });
       let genUnknown: unknown = null;
       try { genUnknown = await genRes.json(); } catch {}
@@ -152,20 +183,80 @@ export default function AdminPage() {
     } catch (e) { setMsg(`Download error: ${(e as Error).message}`); }
   }
 
+  async function fetchPayments() {
+    if (!orgId) return;
+    try {
+      const res = await fetch(`/api/orgs/${orgId}/payments/list`);
+      const j = await res.json();
+      if (res.ok) setPayments(j.payments || []);
+    } catch (e) {
+      console.error('Failed to fetch payments:', e);
+    }
+  }
+
   async function pay() {
     if (!invoiceId) { setMsg('Enter invoice id'); return; }
-    const amt = parseInt(amount, 10);
-    if (!Number.isFinite(amt) || amt <= 0) { setMsg('Enter amount_cents > 0'); return; }
+    const amtDollars = parseFloat(amount);
+    if (!Number.isFinite(amtDollars) || amtDollars <= 0) { setMsg('Enter amount > 0'); return; }
+    // Convert dollars to cents
+    const amtCents = Math.round(amtDollars * 100);
     setMsg('Posting payment…');
     try {
       const res = await fetch(`/api/invoices/${invoiceId}/payments`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount_cents: amt, method: 'bank' }),
+        body: JSON.stringify({ amount_cents: amtCents, method: 'bank' }),
       });
       const j = await res.json().catch(() => ({} as Record<string, unknown>));
       if (!res.ok) { setMsg(`Error ${res.status}: ${(j['error'] as string) || 'Failed to record payment'}`); return; }
       setMsg(`✓ Payment recorded. Status: ${(j['invoice'] as Record<string, unknown> | undefined)?.['status'] as string}`);
+      // Refresh payments list and invoices
+      await fetchPayments();
+      await fetchInvoices();
+      // Clear form
+      setInvoiceId('');
+      setAmount('0');
     } catch (e) { setMsg(`Network error: ${(e as Error).message}`); }
+  }
+
+  async function deleteInvoice(invoiceIdToDelete: string) {
+    if (!confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/invoices/${invoiceIdToDelete}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(`Error deleting invoice: ${data.error || 'Unknown error'}`);
+        return;
+      }
+      setMsg(`✓ Invoice deleted successfully`);
+      await fetchInvoices();
+    } catch (e) {
+      alert(`Error deleting invoice: ${(e as Error).message}`);
+    }
+  }
+
+  async function deletePayment(paymentId: string) {
+    if (!confirm('Are you sure you want to delete this payment receipt? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/payments/${paymentId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(`Error deleting payment: ${data.error || 'Unknown error'}`);
+        return;
+      }
+      setMsg(`✓ Payment deleted successfully`);
+      await fetchPayments();
+      await fetchInvoices(); // Refresh invoices as status may change back to 'due'
+    } catch (e) {
+      alert(`Error deleting payment: ${(e as Error).message}`);
+    }
   }
 
   async function invite() {
@@ -232,6 +323,28 @@ export default function AdminPage() {
     return () => window.removeEventListener('focus', handleFocus);
   }, [orgId]);
 
+  // Lock/unlock body scroll when modals are open
+  useEffect(() => {
+    if (showUserModal || showPropertyModal) {
+      // Get scrollbar width before hiding it
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+      // Prevent body scroll and hide scrollbar
+      document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    } else {
+      // Restore body scroll and remove padding
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    }
+
+    // Cleanup: ensure scroll is restored when component unmounts
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    };
+  }, [showUserModal, showPropertyModal]);
+
   async function fetchProperties() {
     try {
       const res = await fetch(`/api/orgs/${orgId}/properties/list`, {
@@ -289,7 +402,9 @@ export default function AdminPage() {
 
   async function fetchInvoices() {
     try {
-      const res = await fetch(`/api/orgs/${orgId}/invoices/list`);
+      // Fetch invoices for the entire year to ensure we see all generated invoices
+      const currentYear = new Date().getFullYear();
+      const res = await fetch(`/api/orgs/${orgId}/invoices/list?from=${currentYear}-01&to=${currentYear}-12`);
       const j = await res.json();
       if (res.ok) setInvoices(j.invoices || []);
     } catch (e) {
@@ -723,12 +838,7 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F8F6F2] via-[#E1ECDB]/20 to-[#E1ECDB]/40">
-      {/* Geometric pattern overlay */}
-      <div className="fixed inset-0 opacity-[0.15] pointer-events-none" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23E1ECDB' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        backgroundSize: '60px 60px'
-      }}></div>
+    <div className="min-h-screen bg-gradient-to-br from-[#F8F6F2] via-[#E1ECDB]/30 to-[#9db896]/20 relative">
 
       {/* Header */}
       <div className="bg-white border-b border-border shadow-sm relative">
@@ -880,17 +990,62 @@ export default function AdminPage() {
 
               {/* Users */}
               <div>
-                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                  All Users
-                </h3>
+                <button
+                  onClick={() => setIsAllUsersExpanded(!isAllUsersExpanded)}
+                  className="w-full flex items-center justify-between mb-3 hover:bg-[#E1ECDB]/10 p-2 rounded-lg transition-colors cursor-pointer"
+                >
+                  <h3 className="text-sm font-medium flex items-center gap-2">
+                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    All Users
+                    <Badge variant="outline" className="text-xs">
+                      {users.length} total
+                    </Badge>
+                  </h3>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
+                    <span className="text-xs font-medium text-gray-600">
+                      {isAllUsersExpanded ? 'Hide' : 'Show'}
+                    </span>
+                    <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isAllUsersExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </button>
+
+                <div
+                  className="overflow-hidden transition-all duration-700 ease-in-out"
+                  style={{
+                    maxHeight: isAllUsersExpanded ? '10000px' : '0px',
+                    opacity: isAllUsersExpanded ? 1 : 0,
+                  }}
+                >
+                  {/* Plan Filter */}
+                  {users.length > 0 && (
+                    <div className="mb-4 flex items-center justify-end gap-4 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Filter by Plan:</span>
+                        <select
+                          value={userPlanFilter}
+                          onChange={(e) => setUserPlanFilter(e.target.value)}
+                          className="h-8 rounded-md border border-border bg-background px-2 text-xs shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
+                        >
+                          <option value="all">All Plans</option>
+                          <option value="launch">Launch (12%)</option>
+                          <option value="elevate">Elevate (18%)</option>
+                          <option value="maximize">Maximize (22%)</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
                 {users.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No users yet.</p>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {users.map((user) => (
+                    {users
+                      .filter(user => userPlanFilter === 'all' || user.plan_tier === userPlanFilter)
+                      .map((user) => (
                       <Card
                         key={user.id}
                         className="group relative overflow-hidden border-border/50 bg-gradient-to-br from-card/95 to-card/80 backdrop-blur-sm cursor-pointer hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
@@ -960,6 +1115,7 @@ export default function AdminPage() {
                     ))}
                   </div>
                 )}
+                </div>
               </div>
             </div>
           </CollapsibleSection>
@@ -1043,13 +1199,60 @@ export default function AdminPage() {
 
               {/* Manage Properties */}
               <div>
-                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  All Properties
-                </h3>
-                {properties.length === 0 ? (
+                <button
+                  onClick={() => setIsAllPropertiesExpanded(!isAllPropertiesExpanded)}
+                  className="w-full flex items-center justify-between mb-3 hover:bg-[#E1ECDB]/10 p-2 rounded-lg transition-colors cursor-pointer"
+                >
+                  <h3 className="text-sm font-medium flex items-center gap-2">
+                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    All Properties
+                    <Badge variant="outline" className="text-xs">
+                      {properties.length} total
+                    </Badge>
+                  </h3>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
+                    <span className="text-xs font-medium text-gray-600">
+                      {isAllPropertiesExpanded ? 'Hide' : 'Show'}
+                    </span>
+                    <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isAllPropertiesExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </button>
+
+                <div
+                  className="overflow-hidden transition-all duration-700 ease-in-out"
+                  style={{
+                    maxHeight: isAllPropertiesExpanded ? '10000px' : '0px',
+                    opacity: isAllPropertiesExpanded ? 1 : 0,
+                  }}
+                >
+                  {/* Filter by Property Type */}
+                  {properties.length > 0 && (
+                    <div className="flex items-center justify-end mb-3 gap-2 text-xs">
+                      <span className="text-muted-foreground">Filter by Type:</span>
+                      <select
+                        value={propertyTypeFilter}
+                        onChange={(e) => setPropertyTypeFilter(e.target.value)}
+                        className="h-8 rounded-md border border-border bg-background px-2 text-xs shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
+                      >
+                        <option value="all">All Types</option>
+                        {(() => {
+                          const types = new Set<string>();
+                          properties.forEach(prop => {
+                            if (prop.property_type) types.add(prop.property_type);
+                          });
+                          return Array.from(types).sort().map(type => {
+                            const label = type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+                            return <option key={type} value={type}>{label}</option>;
+                          });
+                        })()}
+                      </select>
+                    </div>
+                  )}
+                  {properties.length === 0 ? (
                   <div className="text-center py-12 bg-muted/30 rounded-lg border-2 border-dashed border-border">
                     <svg className="w-16 h-16 text-muted-foreground/40 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -1058,8 +1261,69 @@ export default function AdminPage() {
                     <p className="text-xs text-muted-foreground">Add your first property using the form above</p>
                   </div>
                 ) : (
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {properties.map((prop, index) => (
+                  <div className="space-y-4">
+                    {(() => {
+                      // Filter properties by selected type
+                      let filteredProperties = properties;
+
+                      if (propertyTypeFilter !== 'all') {
+                        filteredProperties = filteredProperties.filter(prop => prop.property_type === propertyTypeFilter);
+                      }
+
+                      // Group properties by type
+                      const grouped = filteredProperties.reduce((acc: Record<string, any[]>, prop) => {
+                        const key = prop.property_type || 'no-type';
+                        if (!acc[key]) acc[key] = [];
+                        acc[key].push(prop);
+                        return acc;
+                      }, {});
+
+                      return Object.entries(grouped).map(([key, typeProperties]) => {
+                        const typeLabel = key === 'no-type'
+                          ? 'No Type'
+                          : key.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+
+                        const isExpanded = expandedPropertyTypes.has(key);
+
+                        const toggleType = () => {
+                          const newExpanded = new Set(expandedPropertyTypes);
+                          if (isExpanded) {
+                            newExpanded.delete(key);
+                          } else {
+                            newExpanded.add(key);
+                          }
+                          setExpandedPropertyTypes(newExpanded);
+                        };
+
+                        return (
+                          <div key={key} className="border border-border/50 rounded-lg p-4 bg-gradient-to-r from-muted/20 to-muted/10">
+                            {/* Type Header */}
+                            <button
+                              onClick={toggleType}
+                              className="w-full flex items-center justify-between mb-3 hover:bg-[#E1ECDB]/10 p-2 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                </svg>
+                                {typeLabel}
+                                <Badge variant="outline" className="text-xs ml-1">{typeProperties.length}</Badge>
+                              </h4>
+                              <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+
+                            {/* Properties for this type */}
+                            <div
+                              className="overflow-hidden transition-all duration-700 ease-in-out"
+                              style={{
+                                maxHeight: isExpanded ? '5000px' : '0px',
+                                opacity: isExpanded ? 1 : 0,
+                              }}
+                            >
+                              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {typeProperties.map((prop, index) => (
                         <Card
                           key={prop.id}
                           className="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg border-border/50 bg-gradient-to-br from-card via-card to-card/80 backdrop-blur-sm"
@@ -1178,8 +1442,15 @@ export default function AdminPage() {
                         </button>
                       </Card>
                     ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 )}
+                </div>
               </div>
 
               <Separator />
@@ -1332,16 +1603,36 @@ export default function AdminPage() {
 
               {/* All Bookings */}
               <div>
-                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                  All Bookings
-                  <Badge variant="outline" className="ml-auto text-xs">
-                    {bookings.length} total
-                  </Badge>
-                </h3>
+                <button
+                  onClick={() => setIsAllBookingsExpanded(!isAllBookingsExpanded)}
+                  className="w-full flex items-center justify-between mb-3 hover:bg-[#E1ECDB]/10 p-2 rounded-lg transition-colors cursor-pointer"
+                >
+                  <h3 className="text-sm font-medium flex items-center gap-2">
+                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    All Bookings
+                    <Badge variant="outline" className="text-xs">
+                      {bookings.length} total
+                    </Badge>
+                  </h3>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
+                    <span className="text-xs font-medium text-gray-600">
+                      {isAllBookingsExpanded ? 'Hide' : 'Show'}
+                    </span>
+                    <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isAllBookingsExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </button>
 
+                <div
+                  className="overflow-hidden transition-all duration-700 ease-in-out"
+                  style={{
+                    maxHeight: isAllBookingsExpanded ? '10000px' : '0px',
+                    opacity: isAllBookingsExpanded ? 1 : 0,
+                  }}
+                >
                 {/* Filters and Sorting */}
                 {bookings.length > 0 && (
                   <div className="mb-4 p-4 rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm">
@@ -1506,17 +1797,46 @@ export default function AdminPage() {
                         return <p className="text-sm text-muted-foreground">No bookings match the selected filters.</p>;
                       }
 
-                      return groupedByProperty.map(({ property: prop, bookings: propBookings }) => (
-                        <div key={prop.id} className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      return groupedByProperty.map(({ property: prop, bookings: propBookings }) => {
+                        const isPropertyExpanded = expandedBookingProperties.has(prop.id);
+
+                        const toggleProperty = () => {
+                          const newExpanded = new Set(expandedBookingProperties);
+                          if (isPropertyExpanded) {
+                            newExpanded.delete(prop.id);
+                          } else {
+                            newExpanded.add(prop.id);
+                          }
+                          setExpandedBookingProperties(newExpanded);
+                        };
+
+                        return (
+                        <div key={prop.id} className="space-y-3 border border-border/50 rounded-lg p-4 bg-gradient-to-r from-muted/20 to-muted/10">
+                          <button
+                            onClick={toggleProperty}
+                            className="w-full flex items-center justify-between hover:bg-[#E1ECDB]/10 p-2 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                              </svg>
+                              <h4 className="text-sm font-semibold text-foreground">{prop.name}</h4>
+                              <Badge variant="outline" className="text-xs bg-primary/5 border-primary/20">
+                                {propBookings.length} {propBookings.length === 1 ? 'booking' : 'bookings'}
+                              </Badge>
+                            </div>
+                            <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isPropertyExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
-                            <h4 className="text-sm font-semibold text-foreground">{prop.name}</h4>
-                            <Badge variant="outline" className="text-xs bg-primary/5 border-primary/20">
-                              {propBookings.length} {propBookings.length === 1 ? 'booking' : 'bookings'}
-                            </Badge>
-                          </div>
+                          </button>
+
+                          <div
+                            className="overflow-hidden transition-all duration-700 ease-in-out"
+                            style={{
+                              maxHeight: isPropertyExpanded ? '5000px' : '0px',
+                              opacity: isPropertyExpanded ? 1 : 0,
+                            }}
+                          >
                           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                             {propBookings.map((booking) => (
                               <Card key={booking.id} className="group relative overflow-hidden hover:shadow-md transition-all duration-200 border-border/50 bg-gradient-to-br from-card to-card/80">
@@ -1605,256 +1925,13 @@ export default function AdminPage() {
                               </Card>
                             ))}
                           </div>
-                        </div>
-                      ));
-                    })()}
-                  </div>
-                )}
-              </div>
-            </div>
-          </CollapsibleSection>
-
-          {/* Invoices Section */}
-          <CollapsibleSection
-            title="Invoices"
-            description="Generate and manage invoices"
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            }
-          >
-            <div className="space-y-6">
-              {/* Invoice Generation */}
-              <div>
-                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Invoice Generation
-                </h3>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="invoice-month">Month (YYYY-MM)</Label>
-                    <Input
-                      id="invoice-month"
-                      type="month"
-                      value={month}
-                      onChange={(e) => setMonth(e.target.value)}
-                      className="cursor-pointer"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={generate} className="cursor-pointer">Generate Invoice</Button>
-                    <Button onClick={downloadForMonth} variant="secondary" className="cursor-pointer">
-                      Download PDF
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* All Invoices */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium flex items-center gap-2">
-                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    All Invoices
-                    <Badge variant="outline" className="text-xs">
-                      {invoices.length} total
-                    </Badge>
-                  </h3>
-                  {/* Group By Toggle & Month Filter */}
-                  {invoices.length > 0 && (
-                    <div className="flex items-center gap-3 text-xs">
-                      {/* Group By Toggle */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">Group by:</span>
-                        <div className="flex rounded-md border border-border bg-background overflow-hidden">
-                          <button
-                            onClick={() => setInvoiceGroupBy('month')}
-                            className={`px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
-                              invoiceGroupBy === 'month'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-background text-muted-foreground hover:bg-muted'
-                            }`}
-                          >
-                            Month
-                          </button>
-                          <button
-                            onClick={() => setInvoiceGroupBy('property')}
-                            className={`px-3 py-1 text-xs font-medium transition-colors cursor-pointer border-l border-border ${
-                              invoiceGroupBy === 'property'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-background text-muted-foreground hover:bg-muted'
-                            }`}
-                          >
-                            Property
-                          </button>
-                        </div>
-                      </div>
-                      {/* Month Filter */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">Filter:</span>
-                        <select
-                          value={invoiceFilterMonth}
-                          onChange={(e) => setInvoiceFilterMonth(e.target.value)}
-                          className="h-8 rounded-md border border-border bg-background px-2 text-xs shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
-                        >
-                          <option value="all">All Months</option>
-                          {(() => {
-                            const months = new Set<string>();
-                            invoices.forEach(invoice => {
-                              const month = invoice.bill_month?.slice(0, 7);
-                              if (month) months.add(month);
-                            });
-                            return Array.from(months).sort().reverse().map(month => {
-                              const [year, monthNum] = month.split('-').map(Number);
-                              const label = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                              return <option key={month} value={month}>{label}</option>;
-                            });
-                          })()}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {invoices.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No invoices yet.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {(() => {
-                      // Filter invoices by selected month
-                      const filteredInvoices = invoiceFilterMonth === 'all'
-                        ? invoices
-                        : invoices.filter(invoice => invoice.bill_month?.slice(0, 7) === invoiceFilterMonth);
-
-                      // Group invoices by month or property
-                      const grouped = filteredInvoices.reduce((acc: Record<string, any[]>, invoice) => {
-                        const key = invoiceGroupBy === 'month'
-                          ? invoice.bill_month?.slice(0, 7) || 'no-date'
-                          : invoice.org_id || 'no-property';
-                        if (!acc[key]) acc[key] = [];
-                        acc[key].push(invoice);
-                        return acc;
-                      }, {});
-
-                      return Object.entries(grouped).map(([key, groupInvoices]) => {
-                        // Determine label based on grouping
-                        let groupLabel = '';
-                        let groupIcon = null;
-                        if (invoiceGroupBy === 'month') {
-                          const [year, monthNum] = key.split('-').map(Number);
-                          groupLabel = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                          groupIcon = (
-                            <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                          );
-                        } else {
-                          groupLabel = org?.name || 'Organization';
-                          groupIcon = (
-                            <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                          );
-                        }
-
-                        const totalDue = groupInvoices.reduce((sum, inv) => sum + (inv.amount_due_cents || 0), 0);
-                        const paidCount = groupInvoices.filter(inv => inv.status === 'paid').length;
-
-                        return (
-                          <div key={key} className="border border-border/50 rounded-lg p-4 bg-gradient-to-r from-muted/20 to-muted/10">
-                            {/* Group Header */}
-                            <div className="flex items-center justify-between mb-3">
-                              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                                {groupIcon}
-                                {groupLabel}
-                                <Badge variant="outline" className="text-xs ml-1">{groupInvoices.length}</Badge>
-                              </h4>
-                              <div className="flex items-center gap-3 text-xs">
-                                <span className="text-muted-foreground">{paidCount} paid / {groupInvoices.length} total</span>
-                                <span className="font-medium">${(totalDue / 100).toFixed(2)}</span>
-                              </div>
-                            </div>
-
-                            {/* Invoices for this group */}
-                            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                              {groupInvoices.map((invoice) => (
-                                <Card key={invoice.id} className="p-4 border-border/50 bg-card backdrop-blur-sm hover:shadow-md transition-all">
-                                  <div className="space-y-2">
-                                    <div className="flex items-start justify-between">
-                                      <div>
-                                        <h4 className="font-medium text-sm">{invoice.invoice_number || 'Invoice'}</h4>
-                                        <p className="text-xs text-muted-foreground">ID: {invoice.id.slice(0, 8)}</p>
-                                      </div>
-                                      <Badge
-                                        variant={invoice.status === 'paid' ? 'default' : 'outline'}
-                                        className={
-                                          invoice.status === 'paid'
-                                            ? 'bg-green-100 text-green-700 border-green-200'
-                                            : 'bg-red-100 text-red-700 border-red-200'
-                                        }
-                                      >
-                                        {invoice.status === 'paid' ? 'Paid' : 'Due'}
-                                      </Badge>
-                                    </div>
-                                    <p className="text-base font-bold">
-                                      ${(invoice.amount_due_cents / 100).toFixed(2)}
-                                    </p>
-                                    {invoiceGroupBy === 'property' && invoice.bill_month && (
-                                      <p className="text-xs text-muted-foreground">
-                                        {invoice.bill_month}
-                                      </p>
-                                    )}
-                                  </div>
-                                </Card>
-                              ))}
-                            </div>
                           </div>
+                        </div>
                         );
                       });
                     })()}
                   </div>
                 )}
-              </div>
-
-              <Separator />
-
-              {/* Record Payment */}
-              <div>
-                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                  </svg>
-                  Record Payment
-                </h3>
-                <div className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="payment-invoice-id">Invoice ID</Label>
-                      <Input
-                        id="payment-invoice-id"
-                        placeholder="Invoice UUID..."
-                        value={invoiceId}
-                        onChange={(e) => setInvoiceId(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="payment-amount">Amount (cents)</Label>
-                      <Input
-                        id="payment-amount"
-                        type="number"
-                        placeholder="62700"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <Button onClick={pay} className="cursor-pointer">Record Payment</Button>
                 </div>
               </div>
             </div>
@@ -1959,7 +2036,10 @@ export default function AdminPage() {
 
               {/* All Revenue/Expenses */}
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <button
+                  onClick={() => setIsAllEntriesExpanded(!isAllEntriesExpanded)}
+                  className="w-full flex items-center justify-between mb-3 hover:bg-[#E1ECDB]/10 p-2 rounded-lg transition-colors cursor-pointer"
+                >
                   <h3 className="text-sm font-medium flex items-center gap-2">
                     <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -1969,6 +2049,24 @@ export default function AdminPage() {
                       {ledgerEntries.length} total
                     </Badge>
                   </h3>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
+                    <span className="text-xs font-medium text-gray-600">
+                      {isAllEntriesExpanded ? 'Hide' : 'Show'}
+                    </span>
+                    <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isAllEntriesExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </button>
+
+                <div
+                  className="overflow-hidden transition-all duration-700 ease-in-out"
+                  style={{
+                    maxHeight: isAllEntriesExpanded ? '10000px' : '0px',
+                    opacity: isAllEntriesExpanded ? 1 : 0,
+                  }}
+                >
+                  <div className="flex items-center justify-end mb-3">
                   {/* Filters */}
                   <div className="flex items-center gap-4 text-xs">
                     {/* Month Filter */}
@@ -1992,6 +2090,20 @@ export default function AdminPage() {
                             return <option key={month} value={month}>{label}</option>;
                           });
                         })()}
+                      </select>
+                    </div>
+
+                    {/* Property Filter */}
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={ledgerFilterProperty}
+                        onChange={(e) => setLedgerFilterProperty(e.target.value)}
+                        className="h-8 rounded-md border border-border bg-background px-2 text-xs shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
+                      >
+                        <option value="all">All Properties</option>
+                        {properties.map((prop) => (
+                          <option key={prop.id} value={prop.id}>{prop.name}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -2024,10 +2136,16 @@ export default function AdminPage() {
                 ) : (
                   <div className="space-y-4">
                     {(() => {
-                      // Filter entries by selected month
-                      const filteredEntries = ledgerFilterMonth === 'all'
-                        ? ledgerEntries
-                        : ledgerEntries.filter(entry => entry.entry_date?.slice(0, 7) === ledgerFilterMonth);
+                      // Filter entries by selected month and property
+                      let filteredEntries = ledgerEntries;
+
+                      if (ledgerFilterMonth !== 'all') {
+                        filteredEntries = filteredEntries.filter(entry => entry.entry_date?.slice(0, 7) === ledgerFilterMonth);
+                      }
+
+                      if (ledgerFilterProperty !== 'all') {
+                        filteredEntries = filteredEntries.filter(entry => entry.property_id === ledgerFilterProperty);
+                      }
 
                       // Group entries by month or property
                       const grouped = filteredEntries.reduce((acc: Record<string, any[]>, entry) => {
@@ -2063,11 +2181,25 @@ export default function AdminPage() {
 
                         const totalRevenue = entries.filter(e => e.amount_cents > 0).reduce((sum, e) => sum + e.amount_cents, 0);
                         const totalExpenses = entries.filter(e => e.amount_cents < 0).reduce((sum, e) => sum + Math.abs(e.amount_cents), 0);
+                        const isExpanded = expandedGroups.has(key);
+
+                        const toggleGroup = () => {
+                          const newExpanded = new Set(expandedGroups);
+                          if (isExpanded) {
+                            newExpanded.delete(key);
+                          } else {
+                            newExpanded.add(key);
+                          }
+                          setExpandedGroups(newExpanded);
+                        };
 
                         return (
                           <div key={key} className="border border-border/50 rounded-lg p-4 bg-gradient-to-r from-muted/20 to-muted/10">
                             {/* Group Header */}
-                            <div className="flex items-center justify-between mb-3">
+                            <button
+                              onClick={toggleGroup}
+                              className="w-full flex items-center justify-between mb-3 hover:bg-[#E1ECDB]/10 p-2 rounded-lg transition-colors cursor-pointer"
+                            >
                               <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
                                 {groupIcon}
                                 {groupLabel}
@@ -2076,11 +2208,21 @@ export default function AdminPage() {
                               <div className="flex items-center gap-3 text-xs">
                                 <span className="text-green-600 font-medium">+${(totalRevenue / 100).toFixed(2)}</span>
                                 <span className="text-red-600 font-medium">-${(totalExpenses / 100).toFixed(2)}</span>
+                                <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ml-2 ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
                               </div>
-                            </div>
+                            </button>
 
                             {/* Entries for this month */}
-                            <div className="space-y-2">
+                            <div
+                              className="overflow-hidden transition-all duration-700 ease-in-out"
+                              style={{
+                                maxHeight: isExpanded ? '5000px' : '0px',
+                                opacity: isExpanded ? 1 : 0,
+                              }}
+                            >
+                              <div className="space-y-2">
                               {entries.map((entry) => {
                                 const isRevenue = entry.amount_cents > 0;
                                 return (
@@ -2123,7 +2265,12 @@ export default function AdminPage() {
                                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                             <span>{entry.properties?.name || 'Unknown'}</span>
                                             <span>•</span>
-                                            <span>{new Date(entry.entry_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                            <span>{(() => {
+                                              // Parse YYYY-MM-DD in PST to avoid timezone issues
+                                              const [year, month, day] = entry.entry_date.split('-').map(Number);
+                                              const date = new Date(year, month - 1, day);
+                                              return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' });
+                                            })()}</span>
                                           </div>
                                         </div>
 
@@ -2138,6 +2285,7 @@ export default function AdminPage() {
                                   </Card>
                                 );
                               })}
+                              </div>
                             </div>
                           </div>
                         );
@@ -2145,6 +2293,7 @@ export default function AdminPage() {
                     })()}
                   </div>
                 )}
+                </div>
               </div>
 
               <Separator />
@@ -2239,7 +2388,7 @@ export default function AdminPage() {
                     <Button
                       onClick={uploadReceipt}
                       disabled={busyReceipt || !receiptPropertyId || !receiptFile}
-                      className="w-full h-11 cursor-pointer"
+                      className="w-full h-11 cursor-pointer transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
                       size="lg"
                     >
                       {busyReceipt ? (
@@ -2252,7 +2401,7 @@ export default function AdminPage() {
                         </>
                       ) : (
                         <>
-                          <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                           </svg>
                           Upload Receipt
@@ -2272,6 +2421,550 @@ export default function AdminPage() {
                   </div>
                 </Card>
               </div>
+            </div>
+          </CollapsibleSection>
+
+          {/* Invoices Section */}
+          <CollapsibleSection
+            title="Invoices"
+            description="Generate and manage invoices"
+            icon={
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            }
+          >
+            <div className="space-y-6">
+              {/* Invoice Generation */}
+              <div>
+                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Invoice Generation
+                </h3>
+                <Card className="border-border/50 bg-gradient-to-br from-card/95 to-card/80 backdrop-blur-sm">
+                  <div className="p-6 space-y-4">
+                    {/* Property Selection */}
+                    <div className="space-y-2">
+                      <Label htmlFor="invoice-property" className="text-sm font-medium flex items-center gap-2">
+                        <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                        Property
+                      </Label>
+                      <select
+                        id="invoice-property"
+                        value={invoicePropertyId}
+                        onChange={(e) => setInvoicePropertyId(e.target.value)}
+                        className="flex h-11 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 cursor-pointer"
+                      >
+                        <option value="">All Properties (Organization Invoice)</option>
+                        {properties.map((prop) => (
+                          <option key={prop.id} value={prop.id}>{prop.name}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-muted-foreground">
+                        Select a specific property or leave blank to generate an invoice for all properties
+                      </p>
+                    </div>
+
+                    <Separator />
+
+                    {/* Month Selection */}
+                    <div className="space-y-2">
+                      <Label htmlFor="invoice-month" className="text-sm font-medium flex items-center gap-2">
+                        <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Month
+                      </Label>
+                      <Input
+                        id="invoice-month"
+                        type="month"
+                        value={month}
+                        onChange={(e) => setMonth(e.target.value)}
+                        className="h-11 cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-2">
+                      <Button onClick={generate} className="cursor-pointer w-full">
+                        <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Generate Invoice
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              <Separator />
+
+              {/* All Invoices */}
+              <div>
+                <button
+                  onClick={() => setIsAllInvoicesExpanded(!isAllInvoicesExpanded)}
+                  className="w-full flex items-center justify-between mb-3 hover:bg-[#E1ECDB]/10 p-2 rounded-lg transition-colors cursor-pointer"
+                >
+                  <h3 className="text-sm font-medium flex items-center gap-2">
+                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    All Invoices
+                    <Badge variant="outline" className="text-xs">
+                      {invoices.length} total
+                    </Badge>
+                  </h3>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
+                    <span className="text-xs font-medium text-gray-600">
+                      {isAllInvoicesExpanded ? 'Hide' : 'Show'}
+                    </span>
+                    <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isAllInvoicesExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </button>
+
+                <div
+                  className="overflow-hidden transition-all duration-700 ease-in-out"
+                  style={{
+                    maxHeight: isAllInvoicesExpanded ? '10000px' : '0px',
+                    opacity: isAllInvoicesExpanded ? 1 : 0,
+                  }}
+                >
+                  <div className="flex items-center justify-end mb-3">
+                  {/* Group By Toggle & Month Filter */}
+                  {invoices.length > 0 && (
+                    <div className="flex items-center gap-3 text-xs">
+                      {/* Group By Toggle */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Group by:</span>
+                        <div className="flex rounded-md border border-border bg-background overflow-hidden">
+                          <button
+                            onClick={() => setInvoiceGroupBy('month')}
+                            className={`px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                              invoiceGroupBy === 'month'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-background text-muted-foreground hover:bg-muted'
+                            }`}
+                          >
+                            Month
+                          </button>
+                          <button
+                            onClick={() => setInvoiceGroupBy('property')}
+                            className={`px-3 py-1 text-xs font-medium transition-colors cursor-pointer border-l border-border ${
+                              invoiceGroupBy === 'property'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-background text-muted-foreground hover:bg-muted'
+                            }`}
+                          >
+                            Property
+                          </button>
+                        </div>
+                      </div>
+                      {/* Month Filter */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Filter:</span>
+                        <select
+                          value={invoiceFilterMonth}
+                          onChange={(e) => setInvoiceFilterMonth(e.target.value)}
+                          className="h-8 rounded-md border border-border bg-background px-2 text-xs shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
+                        >
+                          <option value="all">All Months</option>
+                          {(() => {
+                            const months = new Set<string>();
+                            invoices.forEach(invoice => {
+                              const month = invoice.bill_month?.slice(0, 7);
+                              if (month) months.add(month);
+                            });
+                            return Array.from(months).sort().reverse().map(month => {
+                              const [year, monthNum] = month.split('-').map(Number);
+                              const label = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                              return <option key={month} value={month}>{label}</option>;
+                            });
+                          })()}
+                        </select>
+                      </div>
+
+                      {/* Property Filter */}
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={invoiceFilterProperty}
+                          onChange={(e) => setInvoiceFilterProperty(e.target.value)}
+                          className="h-8 rounded-md border border-border bg-background px-2 text-xs shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
+                        >
+                          <option value="all">All Properties</option>
+                          {properties.map((prop) => (
+                            <option key={prop.id} value={prop.id}>{prop.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {invoices.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No invoices yet.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {(() => {
+                      // Filter invoices by selected month and property
+                      let filteredInvoices = invoices;
+
+                      if (invoiceFilterMonth !== 'all') {
+                        filteredInvoices = filteredInvoices.filter(invoice => invoice.bill_month?.slice(0, 7) === invoiceFilterMonth);
+                      }
+
+                      if (invoiceFilterProperty !== 'all') {
+                        filteredInvoices = filteredInvoices.filter(invoice => invoice.property_id === invoiceFilterProperty);
+                      }
+
+                      // Group invoices by month or property
+                      const grouped = filteredInvoices.reduce((acc: Record<string, any[]>, invoice) => {
+                        const key = invoiceGroupBy === 'month'
+                          ? invoice.bill_month?.slice(0, 7) || 'no-date'
+                          : invoice.property_id || 'no-property';
+                        if (!acc[key]) acc[key] = [];
+                        acc[key].push(invoice);
+                        return acc;
+                      }, {});
+
+                      return Object.entries(grouped).map(([key, groupInvoices]) => {
+                        // Determine label based on grouping
+                        let groupLabel = '';
+                        let groupIcon = null;
+                        if (invoiceGroupBy === 'month') {
+                          const [year, monthNum] = key.split('-').map(Number);
+                          groupLabel = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                          groupIcon = (
+                            <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          );
+                        } else {
+                          const property = properties.find(p => p.id === key);
+                          groupLabel = property?.name || 'Unknown Property';
+                          groupIcon = (
+                            <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                          );
+                        }
+
+                        const totalDue = groupInvoices.reduce((sum, inv) => sum + (inv.amount_due_cents || 0), 0);
+                        const paidCount = groupInvoices.filter(inv => inv.status === 'paid').length;
+                        const isExpanded = expandedInvoiceGroups.has(key);
+
+                        const toggleGroup = () => {
+                          const newExpanded = new Set(expandedInvoiceGroups);
+                          if (isExpanded) {
+                            newExpanded.delete(key);
+                          } else {
+                            newExpanded.add(key);
+                          }
+                          setExpandedInvoiceGroups(newExpanded);
+                        };
+
+                        return (
+                          <div key={key} className="border border-border/50 rounded-lg p-4 bg-gradient-to-r from-muted/20 to-muted/10">
+                            {/* Group Header */}
+                            <button
+                              onClick={toggleGroup}
+                              className="w-full flex items-center justify-between mb-3 hover:bg-[#E1ECDB]/10 p-2 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                {groupIcon}
+                                {groupLabel}
+                                <Badge variant="outline" className="text-xs ml-1">{groupInvoices.length}</Badge>
+                              </h4>
+                              <div className="flex items-center gap-3 text-xs">
+                                <span className="text-muted-foreground">{paidCount} paid / {groupInvoices.length} total</span>
+                                <span className="font-medium">${(totalDue / 100).toFixed(2)}</span>
+                                <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ml-2 ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </button>
+
+                            {/* Invoices for this group */}
+                            <div
+                              className="overflow-hidden transition-all duration-700 ease-in-out"
+                              style={{
+                                maxHeight: isExpanded ? '5000px' : '0px',
+                                opacity: isExpanded ? 1 : 0,
+                              }}
+                            >
+                            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                              {groupInvoices.map((invoice) => (
+                                <Card key={invoice.id} className="p-4 border-border/50 bg-card backdrop-blur-sm hover:shadow-md transition-all">
+                                  <div className="space-y-3">
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <h4 className="font-medium text-sm">{invoice.invoice_number || 'Invoice'}</h4>
+                                          <button
+                                            onClick={() => {
+                                              navigator.clipboard.writeText(invoice.id);
+                                              setMsg('✓ Invoice ID copied for payment');
+                                              setTimeout(() => setMsg(null), 2000);
+                                            }}
+                                            className="p-1 hover:bg-primary/10 rounded transition-colors"
+                                            title="Copy Invoice ID for Payment"
+                                          >
+                                            <svg className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                            </svg>
+                                          </button>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">ID: {invoice.id.slice(0, 8)}</p>
+                                      </div>
+                                      <Badge
+                                        variant={invoice.status === 'paid' ? 'default' : 'outline'}
+                                        className={
+                                          invoice.status === 'paid'
+                                            ? 'bg-green-100 text-green-700 border-green-200'
+                                            : 'bg-red-100 text-red-700 border-red-200'
+                                        }
+                                      >
+                                        {invoice.status === 'paid' ? 'Paid' : 'Due'}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-base font-bold">
+                                      ${(invoice.amount_due_cents / 100).toFixed(2)}
+                                    </p>
+                                    {invoiceGroupBy === 'property' && invoice.bill_month && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {invoice.bill_month}
+                                      </p>
+                                    )}
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-2">
+                                      <Button
+                                        onClick={async () => {
+                                          try {
+                                            const res = await fetch(`/api/invoices/${invoice.id}/pdf-link`);
+                                            const data = await res.json();
+                                            if (data.ok && data.url) {
+                                              window.open(data.url, '_blank');
+                                            } else {
+                                              alert('Failed to generate PDF link');
+                                            }
+                                          } catch (error) {
+                                            alert('Error downloading PDF');
+                                          }
+                                        }}
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex-1 cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                                      >
+                                        <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        Download
+                                      </Button>
+                                      <Button
+                                        onClick={() => deleteInvoice(invoice.id)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Record Payment */}
+              <div>
+                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Record Payment
+                </h3>
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="payment-invoice-id">Invoice ID</Label>
+                      <Input
+                        id="payment-invoice-id"
+                        placeholder="Invoice UUID..."
+                        value={invoiceId}
+                        onChange={(e) => setInvoiceId(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="payment-amount">Amount (CAD)</Label>
+                      <Input
+                        id="payment-amount"
+                        type="number"
+                        step="0.01"
+                        placeholder="627.00"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={pay} className="cursor-pointer">Record Payment</Button>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Payment Receipts */}
+              <CollapsibleSection
+                title="Payment Receipts"
+                description={`${payments.length} payment${payments.length !== 1 ? 's' : ''} recorded`}
+                icon={
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                }
+                defaultOpen={true}
+                onOpenChange={(open) => {
+                  if (open && payments.length === 0) {
+                    fetchPayments();
+                  }
+                }}
+              >
+                <div className="space-y-6">
+                  <div>
+                  <div className="space-y-4">
+                    {/* Filters */}
+                    <div className="flex gap-3">
+                      <div className="flex-1">
+                        <Label htmlFor="payment-property-filter" className="text-xs mb-1">Filter by Property</Label>
+                        <select
+                          id="payment-property-filter"
+                          value={paymentPropertyFilter}
+                          onChange={(e) => setPaymentPropertyFilter(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border rounded-md bg-background"
+                        >
+                          <option value="all">All Properties</option>
+                          {Array.from(new Set(payments.map((p: any) => p.invoice?.property?.name).filter(Boolean))).map((propertyName: any) => (
+                            <option key={propertyName} value={propertyName}>{propertyName}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <Label htmlFor="payment-date-filter" className="text-xs mb-1">Filter by Month</Label>
+                        <select
+                          id="payment-date-filter"
+                          value={paymentDateFilter}
+                          onChange={(e) => setPaymentDateFilter(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border rounded-md bg-background"
+                        >
+                          <option value="all">All Months</option>
+                          {Array.from(new Set(payments.map((p: any) => p.invoice?.bill_month).filter(Boolean))).sort().reverse().map((month: any) => (
+                            <option key={month} value={month}>
+                              {(() => {
+                                const [year, monthNum] = month.split('-');
+                                return new Date(parseInt(year), parseInt(monthNum) - 1, 1).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+                              })()}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Payment List */}
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {payments.filter((payment: any) => {
+                        const matchesProperty = paymentPropertyFilter === 'all' || payment.invoice?.property?.name === paymentPropertyFilter;
+                        const matchesDate = paymentDateFilter === 'all' || payment.invoice?.bill_month === paymentDateFilter;
+                        return matchesProperty && matchesDate;
+                      }).length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-8">
+                          {payments.length === 0 ? 'No payments recorded yet' : 'No payments match the selected filters'}
+                        </p>
+                      ) : (
+                        payments.filter((payment: any) => {
+                          const matchesProperty = paymentPropertyFilter === 'all' || payment.invoice?.property?.name === paymentPropertyFilter;
+                          const matchesDate = paymentDateFilter === 'all' || payment.invoice?.bill_month === paymentDateFilter;
+                          return matchesProperty && matchesDate;
+                        }).map((payment: any) => (
+                          <Card key={payment.id} className="p-4 bg-muted/30 border-muted hover:border-primary/30 transition-colors relative">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                    Paid
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(payment.payment_date).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric',
+                                      timeZone: 'America/Los_Angeles'
+                                    })}
+                                  </span>
+                                </div>
+                                <p className="font-medium text-sm mb-1">
+                                  {payment.invoice?.invoice_number || 'Invoice'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {payment.invoice?.bill_month && (() => {
+                                    const [year, month] = payment.invoice.bill_month.split('-').map(Number);
+                                    return new Date(year, month - 1, 1).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'long'
+                                    });
+                                  })()}
+                                </p>
+                                {payment.invoice?.property?.name && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Property: {payment.invoice.property.name}
+                                  </p>
+                                )}
+                                {payment.payment_method && (
+                                  <p className="text-xs text-muted-foreground mt-1 capitalize">
+                                    Method: {payment.payment_method}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right flex flex-col items-end gap-2">
+                                <div>
+                                  <p className="text-lg font-bold text-green-600">
+                                    ${(payment.amount_cents / 100).toFixed(2)}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">CAD</p>
+                                </div>
+                                <button
+                                  onClick={() => deletePayment(payment.id)}
+                                  className="p-1.5 hover:bg-red-50 rounded transition-colors group"
+                                  title="Delete Payment"
+                                >
+                                  <svg className="w-4 h-4 text-muted-foreground group-hover:text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          </Card>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  </div>
+                </div>
+              </CollapsibleSection>
             </div>
           </CollapsibleSection>
 
@@ -2460,7 +3153,22 @@ export default function AdminPage() {
                                 </svg>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm">{invoice.invoice_number || 'Invoice'}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-sm">{invoice.invoice_number || 'Invoice'}</p>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(invoice.id);
+                                      setMsg('✓ Invoice ID copied for payment');
+                                      setTimeout(() => setMsg(null), 2000);
+                                    }}
+                                    className="p-1 hover:bg-primary/10 rounded transition-colors"
+                                    title="Copy Invoice ID for Payment"
+                                  >
+                                    <svg className="w-3 h-3 text-muted-foreground hover:text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                  </button>
+                                </div>
                                 <p className="text-xs text-muted-foreground">
                                   {new Date(invoice.bill_month).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
                                 </p>

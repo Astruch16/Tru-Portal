@@ -52,6 +52,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<Params> }) {
       }
     }
 
+    console.log('Plan API - orgId:', orgId, 'userId:', userId);
+
     // Get the most recent plan for this user and org
     let planQuery = admin.from('plans')
       .select('tier, percent')
@@ -69,11 +71,14 @@ export async function GET(req: NextRequest, ctx: { params: Promise<Params> }) {
       .limit(1)
       .maybeSingle();
 
+    console.log('Plan API - Query result:', plan);
+
     if (plan.error && !/does not exist/i.test(plan.error.message)) {
       return NextResponse.json({ error: plan.error.message }, { status: 400 });
     }
 
     if (plan.data) {
+      console.log('Plan API - Returning plan:', plan.data);
       return NextResponse.json({
         ok: true,
         plan: { tier: plan.data.tier as Tier, percent: Number(plan.data.percent) },

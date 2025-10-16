@@ -145,8 +145,22 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
   const [loadingEntries, setLoadingEntries] = useState(false);
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(true);
   const [sortOrder, setSortOrder] = useState<'chronological' | 'peak' | 'low'>('chronological');
+  const [isEntriesExpanded, setIsEntriesExpanded] = useState(true);
+  const [entryTypeFilter, setEntryTypeFilter] = useState<'all' | 'revenue' | 'expenses'>('all');
 
   const config = METRIC_CONFIG[metricType];
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = 'hidden';
+    document.body.style.paddingRight = `${scrollbarWidth}px`;
+
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    };
+  }, []);
 
   useEffect(() => {
     async function fetchHistory() {
@@ -335,11 +349,24 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
       onClick={onClose}
+      onWheel={(e) => e.stopPropagation()}
     >
       <div
-        className="bg-[#F8F6F2] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-auto animate-in zoom-in-95 duration-200"
-        style={{ border: '2px solid #E1ECDB' }}
+        className="bg-[#F8F6F2] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-auto animate-in zoom-in-95 duration-200 modal-scrollbar"
+        style={{
+          border: '2px solid #E1ECDB',
+          scrollbarGutter: 'stable'
+        }}
         onClick={(e) => e.stopPropagation()}
+        onWheel={(e) => {
+          const target = e.currentTarget;
+          const atTop = target.scrollTop === 0;
+          const atBottom = target.scrollHeight - target.scrollTop === target.clientHeight;
+
+          if ((atTop && e.deltaY < 0) || (atBottom && e.deltaY > 0)) {
+            e.preventDefault();
+          }
+        }}
       >
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-[#a8c5a0] to-[#8fb389] text-white px-6 py-5 rounded-t-2xl border-b border-[#E1ECDB]/20" style={{ background: 'linear-gradient(to right, #9db896, #88a882)' }}>
@@ -620,56 +647,140 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
               {/* Individual Entries List (Monthly View Only) */}
               {viewMode === 'monthly' && (monthlyEntries.length > 0 || monthlyBookings.length > 0) && (
                 <Card className="shadow-lg bg-white" style={{ border: '1px solid #E1ECDB' }}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                      </svg>
-                      All Entries This Month
-                    </CardTitle>
-                    <CardDescription>
-                      {monthlyEntries.length + monthlyBookings.length} total {monthlyEntries.length + monthlyBookings.length === 1 ? 'entry' : 'entries'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {/* Ledger Entries */}
-                      {monthlyEntries.sort((a, b) => a.entry_date.localeCompare(b.entry_date)).map((entry) => {
-                        // Parse date without timezone conversion (keep in PST/local)
-                        const [year, month, day] = entry.entry_date.split('-').map(Number);
-                        const date = new Date(year, month - 1, day);
-                        const isRevenue = entry.amount_cents > 0;
+                  {/* Header - Always Visible */}
+                  <button
+                    onClick={() => setIsEntriesExpanded(!isEntriesExpanded)}
+                    className="w-full text-left"
+                  >
+                    <CardHeader className="hover:bg-[#E1ECDB]/10 transition-colors cursor-pointer">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <svg className="w-5 h-5 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                            </svg>
+                            All Entries This Month
+                          </CardTitle>
+                          <CardDescription>
+                            {monthlyEntries.length + monthlyBookings.length} total {monthlyEntries.length + monthlyBookings.length === 1 ? 'entry' : 'entries'}
+                          </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
+                          <span className="text-xs font-medium text-gray-600">
+                            {isEntriesExpanded ? 'Hide' : 'Show'}
+                          </span>
+                          <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isEntriesExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </button>
 
-                        return (
-                          <div
-                            key={entry.id}
-                            className="flex items-center justify-between p-3 bg-[#F8F6F2] hover:bg-[#E1ECDB]/20 rounded-lg transition-colors"
-                            style={{ border: '1px solid #E1ECDB' }}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isRevenue ? 'bg-green-100' : 'bg-red-100'}`}>
-                                <svg className={`w-5 h-5 ${isRevenue ? 'text-green-700' : 'text-red-700'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  {isRevenue ? (
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  ) : (
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                                  )}
-                                </svg>
-                              </div>
-                              <div>
-                                <div className="font-semibold text-gray-900">{entry.category || (isRevenue ? 'Revenue' : 'Expense')}</div>
-                                <div className="text-xs text-gray-600">
-                                  Day {day} - {format(date, 'MMM d, yyyy')}
-                                  {entry.properties?.name && ` • ${entry.properties.name}`}
+                  {/* Content - Collapsible */}
+                  <div
+                    className="overflow-hidden transition-all duration-700 ease-in-out"
+                    style={{
+                      maxHeight: isEntriesExpanded ? '1200px' : '0px',
+                      opacity: isEntriesExpanded ? 1 : 0,
+                    }}
+                  >
+                    {/* Type Filter Buttons (Only for revenue/expense metrics) */}
+                    {(metricType === 'gross_revenue' || metricType === 'expenses' || metricType === 'net_revenue') && (
+                      <div className="px-6 py-4 border-t border-[#E1ECDB]">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground font-medium text-sm mr-2">Filter Type:</span>
+                          <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-lg border border-[#E1ECDB]">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setEntryTypeFilter('all')}
+                              className={`h-7 px-3 text-xs font-medium transition-all ${
+                                entryTypeFilter === 'all'
+                                  ? 'bg-[#9db896] text-white shadow-sm hover:bg-[#9db896]/90'
+                                  : 'text-foreground hover:bg-muted/50'
+                              }`}
+                            >
+                              All
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setEntryTypeFilter('revenue')}
+                              className={`h-7 px-3 text-xs font-medium transition-all ${
+                                entryTypeFilter === 'revenue'
+                                  ? 'bg-green-600 text-white shadow-sm hover:bg-green-600/90'
+                                  : 'text-foreground hover:bg-muted/50'
+                              }`}
+                            >
+                              Revenue
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setEntryTypeFilter('expenses')}
+                              className={`h-7 px-3 text-xs font-medium transition-all ${
+                                entryTypeFilter === 'expenses'
+                                  ? 'bg-red-600 text-white shadow-sm hover:bg-red-600/90'
+                                  : 'text-foreground hover:bg-muted/50'
+                              }`}
+                            >
+                              Expenses
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <CardContent className="pt-6">
+                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {/* Ledger Entries */}
+                      {(() => {
+                        // Apply type filter
+                        let filteredEntries = monthlyEntries;
+                        if (entryTypeFilter === 'revenue') {
+                          filteredEntries = monthlyEntries.filter(e => e.amount_cents > 0);
+                        } else if (entryTypeFilter === 'expenses') {
+                          filteredEntries = monthlyEntries.filter(e => e.amount_cents < 0);
+                        }
+
+                        return filteredEntries.sort((a, b) => a.entry_date.localeCompare(b.entry_date)).map((entry) => {
+                          // Parse date without timezone conversion (keep in PST/local)
+                          const [year, month, day] = entry.entry_date.split('-').map(Number);
+                          const date = new Date(year, month - 1, day);
+                          const isRevenue = entry.amount_cents > 0;
+
+                          return (
+                            <div
+                              key={entry.id}
+                              className="flex items-center justify-between p-3 bg-[#F8F6F2] hover:bg-[#E1ECDB]/20 rounded-lg transition-colors"
+                              style={{ border: '1px solid #E1ECDB' }}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isRevenue ? 'bg-green-100' : 'bg-red-100'}`}>
+                                  <svg className={`w-5 h-5 ${isRevenue ? 'text-green-700' : 'text-red-700'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    {isRevenue ? (
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    ) : (
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    )}
+                                  </svg>
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-gray-900">{entry.category || (isRevenue ? 'Revenue' : 'Expense')}</div>
+                                  <div className="text-xs text-gray-600">
+                                    Day {day} - {format(date, 'MMM d, yyyy')}
+                                    {entry.properties?.name && ` • ${entry.properties.name}`}
+                                  </div>
                                 </div>
                               </div>
+                              <div className={`text-lg font-bold ${isRevenue ? 'text-green-700' : 'text-red-700'}`}>
+                                {isRevenue ? '+' : '-'}${(Math.abs(entry.amount_cents) / 100).toFixed(2)}
+                              </div>
                             </div>
-                            <div className={`text-lg font-bold ${isRevenue ? 'text-green-700' : 'text-red-700'}`}>
-                              {isRevenue ? '+' : '-'}${(Math.abs(entry.amount_cents) / 100).toFixed(2)}
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        });
+                      })()}
 
                       {/* Bookings */}
                       {monthlyBookings.sort((a, b) => a.check_in.localeCompare(b.check_in)).map((booking) => {
@@ -713,8 +824,9 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                       })}
                     </div>
                   </CardContent>
-                </Card>
-              )}
+                </div>
+              </Card>
+            )}
 
               {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

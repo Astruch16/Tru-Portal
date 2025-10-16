@@ -98,14 +98,22 @@ export default async function PortalPage({
       headers['Authorization'] = `Bearer ${session.access_token}`;
     }
 
-    const pr = await fetch(`${base}/api/orgs/${orgId}/plan`, {
+    const planUrl = `${base}/api/orgs/${orgId}/plan`;
+    console.log('Portal page - Fetching plan from:', planUrl);
+    const pr = await fetch(planUrl, {
       cache: 'no-store',
       headers
     });
+    console.log('Portal page - Plan response status:', pr.status);
     const pj = await pr.json().catch(() => ({}));
+    console.log('Portal page - Plan response body:', pj);
     const p = isRecord(pj) && isRecord((pj as Record<string, unknown>).plan) ? (pj as Record<string, unknown>).plan : null;
     if (p && isPlan(p)) plan = p;
-  } catch { plan = null; }
+    console.log('Portal page - Final plan:', plan);
+  } catch (e) {
+    console.log('Portal page - Plan fetch error:', e);
+    plan = null;
+  }
 
   // KPIs - fetch with authentication to get user-specific KPIs
   let k: KPI | null = null;
@@ -132,8 +140,9 @@ export default async function PortalPage({
     k = filtered[0] ?? null;
   } catch { k = null; }
 
-  // Invoices
-  const invRes = await fetch(`${base}/api/orgs/${orgId}/invoices/list?from=${ym}&to=${ym}`, { cache: 'no-store' });
+  // Invoices - fetch entire year to ensure we see all generated invoices
+  const currentYear = new Date().getFullYear();
+  const invRes = await fetch(`${base}/api/orgs/${orgId}/invoices/list?from=${currentYear}-01&to=${currentYear}-12`, { cache: 'no-store' });
   let invoices: Invoice[] = [];
   try {
     const invJson = await invRes.json();

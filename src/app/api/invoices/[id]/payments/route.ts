@@ -10,9 +10,10 @@ function extractUuid(s: string): string | null {
   return m ? m[0].toLowerCase() : null;
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // --- validate invoice id ---
-  const raw = params.id ?? '';
+  const { id: rawId } = await params;
+  const raw = rawId ?? '';
   const id = extractUuid(raw);
   if (!id) return NextResponse.json({ error: `Bad invoice id: "${raw}"` }, { status: 400 });
 
@@ -47,22 +48,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const allowed: PaymentMethod[] = ['bank', 'card', 'cash', 'other'];
   const method: PaymentMethod = (allowed as readonly string[]).includes(methodRaw) ? (methodRaw as PaymentMethod) : 'bank';
 
-  // note
-  const note = typeof b['note'] === 'string' ? b['note'] : null;
-
-  // Fix A: only include received_on if valid YYYY-MM-DD; otherwise omit to use DB default
-  const received_on =
-    (typeof b['received_on'] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b['received_on']))
-      ? (b['received_on'] as string)
+  // payment_date: optional, defaults to NOW() in DB
+  const payment_date =
+    (typeof b['payment_date'] === 'string' && /^\d{4}-\d{2}-\d{2}/.test(b['payment_date']))
+      ? (b['payment_date'] as string)
       : undefined;
 
   const payload: Record<string, unknown> = {
     invoice_id: id,
     amount_cents,
-    method,
-    note,
+    payment_method: method,
   };
-  if (received_on) payload.received_on = received_on;
+  if (payment_date) payload.payment_date = payment_date;
 
   // --- insert payment ---
   const admin = createClient(
@@ -78,10 +75,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (insErr) return NextResponse.json({ error: insErr.message }, { status: 400 });
 
+  // --- update invoice status to 'paid' ---
+  const { error: updateErr } = await admin
+    .from('invoices')
+    .update({ status: 'paid' })
+    .eq('id', id);
+
+  if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 400 });
+
   // --- return updated invoice summary ---
   const { data: inv, error: invErr } = await admin
     .from('invoices')
-    .select('id, amount_due_cents, paid_total_cents, paid_at, status')
+    .select('id, invoice_number, amount_due_cents, status, bill_month')
     .eq('id', id)
     .maybeSingle();
 

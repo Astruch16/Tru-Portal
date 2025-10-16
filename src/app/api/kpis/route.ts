@@ -47,5 +47,60 @@ export async function GET(req: NextRequest) {
     .eq('month', month);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  // Dynamically calculate nights_booked, occupancy_rate, and vacancy_rate from bookings
+  if (data && data.length > 0) {
+    const kpi = data[0];
+    const monthStr = month.slice(0, 7); // YYYY-MM
+
+    // Get user's properties
+    const { data: userProps } = await admin
+      .from('user_properties')
+      .select('property_id')
+      .eq('user_id', userId);
+
+    const propertyIds = userProps?.map(up => up.property_id) || [];
+
+    if (propertyIds.length > 0) {
+      // Calculate start and end dates for the month
+      const [year, monthNum] = monthStr.split('-').map(Number);
+      const startDate = `${monthStr}-01`;
+      const endDate = new Date(year, monthNum, 1).toISOString().slice(0, 10); // First day of next month
+
+      // Get completed bookings for user's properties in this month
+      const { data: bookings } = await admin
+        .from('bookings')
+        .select('check_in, check_out')
+        .in('property_id', propertyIds)
+        .eq('org_id', orgId)
+        .eq('status', 'completed')
+        .gte('check_in', startDate)
+        .lt('check_in', endDate);
+
+      // Calculate nights booked
+      let nightsBooked = 0;
+      (bookings || []).forEach((booking: any) => {
+        const checkIn = new Date(booking.check_in);
+        const checkOut = new Date(booking.check_out);
+        const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+        nightsBooked += nights;
+      });
+
+      // Calculate days in month
+      const monthDate = new Date(month);
+      const lastDayOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+      const daysInMonth = lastDayOfMonth.getDate();
+
+      // Calculate occupancy and vacancy rates per property
+      const occupancyRate = nightsBooked / (daysInMonth * propertyIds.length);
+      const vacancyRate = 1 - occupancyRate;
+
+      // Update KPI with calculated values
+      kpi.nights_booked = nightsBooked;
+      kpi.occupancy_rate = occupancyRate;
+      kpi.vacancy_rate = vacancyRate;
+    }
+  }
+
   return NextResponse.json({ ok: true, kpis: data || [] });
 }
