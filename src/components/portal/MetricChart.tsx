@@ -215,16 +215,34 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
 
         // Fetch bookings for nights_booked/occupancy/vacancy
         if (metricType === 'nights_booked' || metricType === 'occupancy_rate' || metricType === 'vacancy_rate') {
-          const response = await fetch(`/api/orgs/${orgId}/bookings`);
-          const data = await response.json();
+          // Get authenticated user
+          const { supabaseClient } = await import('@/lib/supabase/client');
+          const sb = supabaseClient();
+          const { data: { user } } = await sb.auth.getUser();
 
-          if (data.ok && data.bookings) {
-            // Filter bookings for the selected month
-            const filtered = data.bookings.filter((booking: Booking) => {
-              const bookingMonth = booking.check_in.slice(0, 7) + '-01';
-              return bookingMonth === selectedMonth && booking.status === 'completed';
-            });
-            setMonthlyBookings(filtered);
+          if (user) {
+            // Get user's property assignments from Supabase
+            const { data: userProperties } = await sb
+              .from('user_properties')
+              .select('property_id')
+              .eq('user_id', user.id);
+
+            const userPropertyIds = userProperties?.map((up) => up.property_id) || [];
+
+            // Fetch all bookings
+            const response = await fetch(`/api/orgs/${orgId}/bookings`);
+            const data = await response.json();
+
+            if (data.ok && data.bookings && userPropertyIds.length > 0) {
+              // Filter bookings for user's properties and selected month
+              const filtered = data.bookings.filter((booking: any) => {
+                const bookingMonth = booking.check_in.slice(0, 7) + '-01';
+                return bookingMonth === selectedMonth &&
+                       booking.status === 'completed' &&
+                       userPropertyIds.includes(booking.property_id);
+              });
+              setMonthlyBookings(filtered);
+            }
           }
         }
       } catch (err) {
@@ -326,19 +344,41 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
         }
       });
     } else if (metricType === 'occupancy_rate' || metricType === 'vacancy_rate') {
-      // For occupancy/vacancy, show cumulative percentage by day
-      let cumulativeNights = 0;
+      // For occupancy/vacancy, mark each day a property was occupied
+      const [year, monthNum] = selectedMonth.split('-').map(Number);
+      const daysInMonth = new Date(year, monthNum, 0).getDate();
+
+      // Get number of properties from user_properties
+      const numProperties = monthlyBookings.length > 0 ?
+        new Set(monthlyBookings.map(b => (b as any).property_id)).size : 1;
+
+      // Mark occupied days for each booking
       monthlyBookings.forEach(booking => {
         const checkIn = new Date(booking.check_in);
         const checkOut = new Date(booking.check_out);
-        const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-        cumulativeNights += nights;
+
+        // Mark each day in the booking range as occupied
+        let currentDate = new Date(checkIn);
+        while (currentDate < checkOut) {
+          const day = currentDate.getDate();
+          const dayIndex = day - 1;
+
+          if (dailyData[dayIndex]) {
+            dailyData[dayIndex].value += (1 / numProperties); // Add occupancy per property
+            dailyData[dayIndex].entries.push(booking);
+          }
+
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
       });
 
-      dailyData.forEach((dayData, idx) => {
-        const daysElapsed = idx + 1;
-        const rate = cumulativeNights / daysElapsed;
-        dayData.value = metricType === 'occupancy_rate' ? rate : (1 - rate);
+      // Convert to percentage and handle vacancy rate
+      dailyData.forEach(dayData => {
+        if (metricType === 'vacancy_rate') {
+          dayData.value = 1 - Math.min(dayData.value, 1);
+        } else {
+          dayData.value = Math.min(dayData.value, 1);
+        }
       });
     }
 
@@ -491,9 +531,11 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   <div className="text-5xl font-bold mb-2 text-[#88a882]">
                     {viewMode === 'monthly'
                       ? config.format(selectedValue)
-                      : config.format(annualData?.total || 0)}
+                      : (metricType === 'occupancy_rate' || metricType === 'vacancy_rate')
+                        ? config.format(annualData?.average || 0)
+                        : config.format(annualData?.total || 0)}
                   </div>
-                  {viewMode === 'annual' && (
+                  {viewMode === 'annual' && metricType !== 'occupancy_rate' && metricType !== 'vacancy_rate' && (
                     <div className="text-sm text-gray-600">
                       Average per month: <strong>{config.format(annualData?.average || 0)}</strong>
                     </div>
@@ -808,7 +850,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                               <div>
                                 <div className="font-semibold text-gray-900">Booking</div>
                                 <div className="text-xs text-gray-600">
-                                  Day {day} - {format(checkInDate, 'MMM d, yyyy')}
+                                  {format(checkInDate, 'MMM d')} - {format(checkOutDate, 'MMM d, yyyy')}
                                   {booking.properties?.name && ` • ${booking.properties.name}`}
                                 </div>
                               </div>
