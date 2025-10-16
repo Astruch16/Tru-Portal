@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getOrgMemberEmails, sendNewReceiptEmail } from '@/lib/email';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -130,6 +131,37 @@ export async function POST(
         ok: false,
         error: 'Failed to save receipt record'
       }, { status: 500 });
+    }
+
+    // Send email notifications to all org members
+    try {
+      const members = await getOrgMemberEmails(orgId);
+      if (members.length > 0) {
+        // Get property name
+        const { data: propertyData } = await admin.from('properties').select('name').eq('id', propertyId).single();
+        const propertyName = propertyData?.name || 'Unknown Property';
+
+        // Format month from receipt_date
+        let monthDisplay = 'N/A';
+        if (receiptDate) {
+          const [year, month] = receiptDate.split('-').map(Number);
+          const date = new Date(year, month - 1, 15);
+          monthDisplay = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        }
+
+        await sendNewReceiptEmail({
+          recipientEmails: members.map(m => m.email),
+          recipientName: members[0].name,
+          propertyName,
+          category: description || 'Uncategorized',
+          month: monthDisplay,
+          fileName: file.name,
+          note: note || undefined,
+          orgId,
+        });
+      }
+    } catch (emailError) {
+      console.error('Failed to send receipt notification:', emailError);
     }
 
     return NextResponse.json({

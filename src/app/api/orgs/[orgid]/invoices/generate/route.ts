@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendInvoiceNotification } from '@/lib/email/resend';
+import { getOrgMemberEmails, sendNewInvoiceEmail } from '@/lib/email';
 import { format } from 'date-fns';
 
 export const runtime = 'nodejs';
@@ -63,44 +63,34 @@ export async function POST(req: NextRequest, { params }: { params: { orgid?: str
   // Send email notification if this is a newly generated invoice
   if (wasNewlyCreated && invoice) {
     try {
-      // Get organization details and user email
-      const { data: orgData } = await admin
-        .from('organizations')
-        .select('name')
-        .eq('id', orgId)
-        .single();
+      // Get all org members
+      const members = await getOrgMemberEmails(orgId);
 
-      const { data: membership } = await admin
-        .from('org_memberships')
-        .select('user_id')
-        .eq('org_id', orgId)
-        .eq('role', 'owner')
-        .single();
+      if (members.length > 0) {
+        // Get organization name
+        const { data: orgData } = await admin
+          .from('organizations')
+          .select('name')
+          .eq('id', orgId)
+          .single();
 
-      let userEmail = '';
-      if (membership) {
-        const { data: { user } } = await admin.auth.admin.getUserById(
-          (membership as { user_id: string }).user_id
-        );
-        userEmail = user?.email || '';
-      }
-
-      if (userEmail) {
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
         const invoiceId = invoice.id as string;
         const invoiceNumber = (invoice.invoice_number as string) || invoiceId;
         const amountCents = (invoice.amount_due_cents as number) || 0;
-        const amountFormatted = `$${(amountCents / 100).toFixed(2)} CAD`;
+        const amountFormatted = `$${(amountCents / 100).toFixed(2)}`;
         const monthFormatted = format(new Date(monthDate), 'MMMM yyyy');
+        const status = (invoice.status as string) || 'due';
 
-        await sendInvoiceNotification({
-          to: userEmail,
-          orgName: (orgData as { name?: string } | null)?.name || 'Valued Client',
+        // Send to all org members
+        await sendNewInvoiceEmail({
+          recipientEmails: members.map(m => m.email),
+          recipientName: members[0].name,
+          organizationName: (orgData as { name?: string } | null)?.name || 'Your Organization',
           invoiceNumber,
-          month: monthFormatted,
+          billMonth: monthFormatted,
           amountDue: amountFormatted,
-          invoiceUrl: `${baseUrl}/api/invoices/${invoiceId}/pdf`,
-          portalUrl: `${baseUrl}/portal/${orgId}?month=${ym}`,
+          status: status.charAt(0).toUpperCase() + status.slice(1),
+          orgId,
         });
 
         // Update invoice to mark email as sent

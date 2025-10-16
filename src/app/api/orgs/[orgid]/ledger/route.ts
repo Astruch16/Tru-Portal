@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getOrgMemberEmails, sendNewLedgerEntryEmail } from '@/lib/email';
 export const runtime = 'nodejs';
 
 function uuidOf(s?: string | null) {
@@ -204,6 +205,31 @@ export async function POST(req: NextRequest, { params }: { params: { orgid?: str
         occupancy_rate: 0,
         vacancy_rate: 0
       }]);
+  }
+
+  // Send email notifications to all org members
+  try {
+    const members = await getOrgMemberEmails(orgId);
+    if (members.length > 0) {
+      // Get property name
+      const { data: propertyData } = await admin.from('properties').select('name').eq('id', property_id).single();
+      const propertyName = propertyData?.name || 'Unknown Property';
+
+      const isRevenue = amount_cents > 0;
+
+      await sendNewLedgerEntryEmail({
+        recipientEmails: members.map(m => m.email),
+        recipientName: members[0].name,
+        type: isRevenue ? 'revenue' : 'expense',
+        propertyName,
+        amount: `$${Math.abs(amount_cents / 100).toFixed(2)}`,
+        date: new Date(entry_date as string).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        description: description || undefined,
+        orgId,
+      });
+    }
+  } catch (emailError) {
+    console.error('Failed to send ledger entry notification:', emailError);
   }
 
   return NextResponse.json({ ok: true, entry: data });
