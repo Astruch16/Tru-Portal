@@ -83,6 +83,11 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
   const [annualKpis, setAnnualKpis] = useState<KPI[]>([]);
   const [loadingAnnual, setLoadingAnnual] = useState(false);
 
+  // Section collapse states
+  const [isPerformanceExpanded, setIsPerformanceExpanded] = useState(true);
+  const [isInvoicesExpanded, setIsInvoicesExpanded] = useState(true);
+  const [isRevenueExpanded, setIsRevenueExpanded] = useState(true);
+
   // Generate month options (January to December of current year)
   const generateMonthOptions = () => {
     const months = [];
@@ -507,7 +512,18 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
         {/* KPI Cards */}
         <div className="mb-8 animate-fade-in">
           <div className="mb-6">
-            <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsPerformanceExpanded(!isPerformanceExpanded)}
+              className="w-full flex items-center gap-3 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2"
+            >
+              <svg
+                className={`w-5 h-5 text-primary transition-transform duration-300 ${isPerformanceExpanded ? 'rotate-90' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
               <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
                 <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -519,20 +535,20 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                   Year to Date {new Date().getFullYear()}
                 </Badge>
               )}
-            </div>
-            {selectedProperty && (
-              <div className="mt-2 flex items-center gap-2">
-                <Badge variant="outline" className="text-sm font-medium border-primary/30 bg-primary/5 text-black">
-                  <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                  </svg>
-                  {selectedProperty.name}
-                </Badge>
-              </div>
-            )}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {metricCards.map((card, index) => (
+            </button>
+            <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isPerformanceExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+              {selectedProperty && (
+                <div className="mt-2 flex items-center gap-2">
+                  <Badge variant="outline" className="text-sm font-medium border-primary/30 bg-primary/5 text-black">
+                    <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    {selectedProperty.name}
+                  </Badge>
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
+                {metricCards.map((card, index) => (
               <Card
                 key={card.label}
                 className={`transition-all duration-500 ease-in-out bg-card overflow-hidden group animate-fade-in ${
@@ -577,29 +593,42 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                     </div>
                   )}
                 </CardContent>
-              </Card>
-            ))}
-          </div>
-          {!activeKpi && (
-            <p className="text-sm text-muted-foreground mt-4 text-center">
-              💡 No data for {viewMode === 'annual' ? `year ${new Date().getFullYear()}` : month} yet{selectedProperty ? ` for ${selectedProperty.name}` : ''}. Values shown are default.
-            </p>
-          )}
-          {viewMode === 'annual' && annualKpis.length > 0 && (
-            <div className="mt-4 p-3 rounded-lg border border-[#E1ECDB] bg-[#E1ECDB]/10">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <svg className="w-4 h-4 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Showing totals from <strong>{annualKpis.length} month{annualKpis.length !== 1 ? 's' : ''}</strong> in {new Date().getFullYear()}</span>
+                </Card>
+                ))}
               </div>
+              {!activeKpi && (
+                <p className="text-sm text-muted-foreground mt-4 text-center">
+                  💡 No data for {viewMode === 'annual' ? `year ${new Date().getFullYear()}` : month} yet{selectedProperty ? ` for ${selectedProperty.name}` : ''}. Values shown are default.
+                </p>
+              )}
+              {viewMode === 'annual' && annualKpis.length > 0 && (
+                <div className="mt-4 p-3 rounded-lg border border-[#E1ECDB] bg-[#E1ECDB]/10">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <svg className="w-4 h-4 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Showing totals from <strong>{annualKpis.length} month{annualKpis.length !== 1 ? 's' : ''}</strong> in {new Date().getFullYear()}</span>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Invoices */}
         <div className="mb-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
-          <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => setIsInvoicesExpanded(!isInvoicesExpanded)}
+            className="w-full flex items-center gap-3 mb-6 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2"
+          >
+            <svg
+              className={`w-5 h-5 text-primary transition-transform duration-300 ${isInvoicesExpanded ? 'rotate-90' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
             <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
               <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -611,6 +640,9 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 </Badge>
               )}
             </h2>
+          </button>
+          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isInvoicesExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="flex items-center justify-between mb-6">
             {/* Month Filter */}
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Filter:</span>
@@ -763,11 +795,23 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
               })()}
             </div>
           )}
+          </div>
         </div>
 
         {/* Revenue & Expenses */}
         <div className="mb-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
-          <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => setIsRevenueExpanded(!isRevenueExpanded)}
+            className="w-full flex items-center gap-3 mb-6 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2"
+          >
+            <svg
+              className={`w-5 h-5 text-primary transition-transform duration-300 ${isRevenueExpanded ? 'rotate-90' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
             <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
               <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -779,6 +823,9 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 </Badge>
               )}
             </h2>
+          </button>
+          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isRevenueExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="flex items-center justify-between mb-6">
             {/* Month Filter */}
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Filter:</span>
@@ -922,6 +969,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
               })()}
             </div>
           )}
+          </div>
         </div>
 
         <Card className="border-dashed bg-muted/20 animate-fade-in" style={{ animationDelay: '500ms', borderColor: '#E1ECDB' }}>
