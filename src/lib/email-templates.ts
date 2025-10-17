@@ -259,6 +259,45 @@ export function newInvoiceEmail(data: {
   };
 }
 
+// Template: Paid Invoice
+export function paidInvoiceEmail(data: {
+  recipientName: string;
+  organizationName: string;
+  invoiceNumber: string;
+  billMonth: string;
+  amountPaid: string;
+  portalUrl: string;
+}) {
+  const content = `
+    <h1 style="margin: 0 0 20px 0; font-size: 28px; color: #10b981; font-weight: 700;">
+      Invoice Marked as Paid
+    </h1>
+    <p style="font-size: 16px; color: #2c2c2c; margin: 0 0 16px 0;">
+      Hi ${data.recipientName},
+    </p>
+    <p style="font-size: 16px; color: #2c2c2c; margin: 0 0 16px 0;">
+      Great news! Your invoice has been marked as paid in your TruHost Portal.
+    </p>
+    ${infoBox(`
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #2c2c2c;"><strong>Invoice #:</strong> ${data.invoiceNumber}</p>
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #2c2c2c;"><strong>Billing Month:</strong> ${data.billMonth}</p>
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #2c2c2c;"><strong>Amount Paid:</strong> ${data.amountPaid}</p>
+      <p style="margin: 0; font-size: 14px; color: #10b981;"><strong>✓ Status:</strong> Paid</p>
+    `)}
+    <p style="font-size: 16px; color: #2c2c2c; margin: 20px 0;">
+      Thank you for your payment! You can view your invoice details in your portal:
+    </p>
+    <div style="text-align: center;">
+      ${button('View Invoice', data.portalUrl)}
+    </div>
+  `;
+
+  return {
+    subject: `Invoice Paid: ${data.invoiceNumber}`,
+    html: emailWrapper(content),
+  };
+}
+
 // Template: New Receipt
 export function newReceiptEmail(data: {
   recipientName: string;

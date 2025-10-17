@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendPaidInvoiceEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 
@@ -86,11 +87,64 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // --- return updated invoice summary ---
   const { data: inv, error: invErr } = await admin
     .from('invoices')
-    .select('id, invoice_number, amount_due_cents, status, bill_month')
+    .select('id, invoice_number, amount_due_cents, status, bill_month, org_id, user_id')
     .eq('id', id)
     .maybeSingle();
 
   if (invErr) return NextResponse.json({ error: invErr.message }, { status: 400 });
+
+  // --- send paid invoice email to the user ---
+  try {
+    if (inv && (inv as any).user_id) {
+      const userId = (inv as any).user_id;
+      const orgId = (inv as any).org_id;
+
+      // Get user's email and name
+      const { data: profile } = await admin
+        .from('profiles')
+        .select('email, first_name, last_name, full_name')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profile && profile.email) {
+        const recipientName = profile.full_name ||
+          [profile.first_name, profile.last_name].filter(Boolean).join(' ') ||
+          'Member';
+
+        // Get organization name
+        const { data: org } = await admin
+          .from('orgs')
+          .select('name')
+          .eq('id', orgId)
+          .maybeSingle();
+
+        const organizationName = org?.name || 'TruHost';
+
+        // Format bill month (YYYY-MM-DD to "Month YYYY")
+        const billMonthDate = new Date((inv as any).bill_month);
+        const billMonth = billMonthDate.toLocaleDateString('en-US', {
+          month: 'long',
+          year: 'numeric'
+        });
+
+        // Format amount paid
+        const amountPaid = `$${(amount_cents / 100).toFixed(2)}`;
+
+        await sendPaidInvoiceEmail({
+          recipientEmails: [profile.email],
+          recipientName,
+          organizationName,
+          invoiceNumber: (inv as any).invoice_number || id,
+          billMonth,
+          amountPaid,
+          orgId,
+        });
+      }
+    }
+  } catch (emailError) {
+    console.error('Failed to send paid invoice email:', emailError);
+    // Don't fail the payment if email fails
+  }
 
   return NextResponse.json({ ok: true, payment, invoice: inv });
 }

@@ -4,6 +4,7 @@ import {
   newBookingEmail,
   newLedgerEntryEmail,
   newInvoiceEmail,
+  paidInvoiceEmail,
   newReceiptEmail,
 } from './email-templates';
 
@@ -155,6 +156,42 @@ export async function sendNewInvoiceEmail(data: {
     }
   } catch (error) {
     console.error('Failed to send invoice email:', error);
+    throw error;
+  }
+}
+
+export async function sendPaidInvoiceEmail(data: {
+  recipientEmails: string[];
+  recipientName: string;
+  organizationName: string;
+  invoiceNumber: string;
+  billMonth: string;
+  amountPaid: string;
+  orgId: string;
+}) {
+  const portalUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/portal/${data.orgId}`;
+
+  const emailContent = paidInvoiceEmail({
+    recipientName: data.recipientName,
+    organizationName: data.organizationName,
+    invoiceNumber: data.invoiceNumber,
+    billMonth: data.billMonth,
+    amountPaid: data.amountPaid,
+    portalUrl,
+  });
+
+  try {
+    for (const email of data.recipientEmails) {
+      await resend.emails.send({
+        from: FROM_EMAIL,
+        to: email,
+        subject: emailContent.subject,
+        html: emailContent.html,
+      });
+      console.log('✓ Paid invoice email sent to:', email);
+    }
+  } catch (error) {
+    console.error('Failed to send paid invoice email:', error);
     throw error;
   }
 }
