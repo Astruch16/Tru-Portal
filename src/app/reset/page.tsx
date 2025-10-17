@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase/client';
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
   const sp = useSearchParams();
   const sb = supabaseClient();
@@ -102,5 +102,18 @@ export default function ResetPasswordPage() {
         <a href="/login" style={{ color: '#2563EB' }}>Back to sign in</a>
       </p>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ maxWidth: 420, margin: '80px auto', padding: 16, fontFamily: 'ui-sans-serif, system-ui' }}>
+        <h1 style={{ fontSize: 24, marginBottom: 8 }}>Reset your password</h1>
+        <p style={{ color: '#6b7280' }}>Loading...</p>
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
