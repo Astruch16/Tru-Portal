@@ -101,6 +101,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
   // Bookings state
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingFilterStatus, setBookingFilterStatus] = useState<string>('all');
+  const [expandedBookingStatuses, setExpandedBookingStatuses] = useState<Set<string>>(new Set(['upcoming', 'completed', 'cancelled']));
 
   // Generate month options (January to December of current year)
   const generateMonthOptions = () => {
@@ -145,6 +146,18 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
         newSet.delete(month);
       } else {
         newSet.add(month);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleBookingStatusExpanded = (status: string) => {
+    setExpandedBookingStatuses(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(status)) {
+        newSet.delete(status);
+      } else {
+        newSet.add(status);
       }
       return newSet;
     });
@@ -1037,7 +1050,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
               )}
             </h2>
           </button>
-          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isBookingsExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isBookingsExpanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="flex items-center justify-between mb-6">
             {/* Status Filter */}
             <div className="flex items-center gap-2 text-sm">
@@ -1061,7 +1074,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {(() => {
                 // Filter bookings by selected status
                 const filteredBookings = bookingFilterStatus === 'all'
@@ -1084,64 +1097,84 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                     cancelled: { color: 'bg-red-100 text-red-800 border-red-300', icon: '✕', label: 'Cancelled' },
                   }[status as 'upcoming' | 'completed' | 'cancelled'];
 
+                  const isExpanded = expandedBookingStatuses.has(status);
+
                   return (
-                    <div key={status}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Badge className={`${statusConfig.color} font-semibold`}>
-                          {statusConfig.icon} {statusConfig.label}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {statusBookings.length} booking{statusBookings.length !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {statusBookings.map((booking) => {
-                          const checkIn = new Date(booking.check_in);
-                          const checkOut = new Date(booking.check_out);
-                          const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+                    <div key={status} className="border border-border/50 rounded-lg bg-gradient-to-r from-muted/20 to-muted/10">
+                      {/* Status Header - Clickable */}
+                      <button
+                        onClick={() => toggleBookingStatusExpanded(status)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-muted/20 transition-colors cursor-pointer text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <svg
+                            className={`w-4 h-4 text-primary transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          <Badge className={`${statusConfig.color} font-semibold`}>
+                            {statusConfig.icon} {statusConfig.label}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {statusBookings.length} booking{statusBookings.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </button>
 
-                          return (
-                            <Card key={booking.id} className="group hover:shadow-md transition-all duration-200 border-border/50 bg-card">
-                              <div className="p-4">
-                                <div className="flex items-start justify-between gap-4">
-                                  {/* Left: Property & Dates */}
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <svg className="w-5 h-5 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                                      </svg>
-                                      <h3 className="text-base font-semibold text-foreground">
-                                        {booking.properties?.name || 'Unknown Property'}
-                                      </h3>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2 text-sm">
-                                      <div>
-                                        <p className="text-xs text-muted-foreground mb-0.5">Check-in</p>
-                                        <p className="font-medium text-foreground">
-                                          {checkIn.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-xs text-muted-foreground mb-0.5">Check-out</p>
-                                        <p className="font-medium text-foreground">
-                                          {checkOut.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
+                      {/* Bookings for this status - Collapsible */}
+                      {isExpanded && (
+                        <div className="px-4 pb-4 space-y-2">
+                          {statusBookings.map((booking) => {
+                            const checkIn = new Date(booking.check_in);
+                            const checkOut = new Date(booking.check_out);
+                            const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
 
-                                  {/* Right: Nights Badge */}
-                                  <div className="text-right">
-                                    <Badge variant="outline" className="bg-primary/10 border-primary/30 text-foreground font-bold text-base px-3 py-1">
-                                      {nights} {nights === 1 ? 'Night' : 'Nights'}
-                                    </Badge>
+                            return (
+                              <Card key={booking.id} className="group hover:shadow-md transition-all duration-200 border-border/50 bg-card">
+                                <div className="p-4">
+                                  <div className="flex items-start justify-between gap-4">
+                                    {/* Left: Property & Dates */}
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <svg className="w-5 h-5 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                        </svg>
+                                        <h3 className="text-base font-semibold text-foreground">
+                                          {booking.properties?.name || 'Unknown Property'}
+                                        </h3>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div>
+                                          <p className="text-xs text-muted-foreground mb-0.5">Check-in</p>
+                                          <p className="font-medium text-foreground">
+                                            {checkIn.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <p className="text-xs text-muted-foreground mb-0.5">Check-out</p>
+                                          <p className="font-medium text-foreground">
+                                            {checkOut.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Right: Nights Badge */}
+                                    <div className="text-right">
+                                      <Badge variant="outline" className="bg-primary/10 border-primary/30 text-foreground font-bold text-base px-3 py-1">
+                                        {nights} {nights === 1 ? 'Night' : 'Nights'}
+                                      </Badge>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </Card>
-                          );
-                        })}
-                      </div>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   );
                 }).filter(Boolean);
