@@ -8,7 +8,7 @@ function uuidOf(s?: string | null) {
   return m ? m[0].toLowerCase() : null;
 }
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ orgid?: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ orgid?: string }> }) {
   const { orgid } = await params;
   const orgId = uuidOf(orgid);
   if (!orgId) return NextResponse.json({ error: 'Bad org id' }, { status: 400 });
@@ -19,12 +19,42 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ org
 
   const admin = createClient(url, key);
 
-  // First, get all properties
-  const { data: propertiesData, error: propertiesError } = await admin
+  // Check if this request is from a member portal (has auth header)
+  const authHeader = req.headers.get('authorization');
+  let userPropertyIds: string[] = [];
+
+  if (authHeader) {
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user } } = await admin.auth.getUser(token);
+
+    if (user) {
+      // Get properties assigned to this user
+      const { data: userProperties } = await admin
+        .from('user_properties')
+        .select('property_id')
+        .eq('user_id', user.id);
+
+      if (userProperties && userProperties.length > 0) {
+        userPropertyIds = userProperties.map(up => up.property_id);
+      } else {
+        // User has no assigned properties, return empty array immediately
+        return NextResponse.json({ ok: true, properties: [] });
+      }
+    }
+  }
+
+  // Get properties - filter by user's assigned properties if authenticated member
+  let propertiesQuery = admin
     .from('properties')
     .select('id, name, address, property_type, airbnb_link')
-    .eq('org_id', orgId)
-    .order('name', { ascending: true });
+    .eq('org_id', orgId);
+
+  // If user has specific properties, filter to only those
+  if (userPropertyIds.length > 0) {
+    propertiesQuery = propertiesQuery.in('id', userPropertyIds);
+  }
+
+  const { data: propertiesData, error: propertiesError } = await propertiesQuery.order('name', { ascending: true });
 
   if (propertiesError) return NextResponse.json({ error: propertiesError.message }, { status: 400 });
 

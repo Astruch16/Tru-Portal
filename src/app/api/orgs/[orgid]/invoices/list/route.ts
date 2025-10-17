@@ -40,11 +40,41 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ orgi
 
   const admin = createClient(supaUrl, service);
 
+  // Check if this request is from a member portal (has auth header)
+  const authHeader = req.headers.get('authorization');
+  let userId: string | null = null;
+
+  if (authHeader) {
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user } } = await admin.auth.getUser(token);
+
+    if (user) {
+      userId = user.id;
+
+      // Check if user has any assigned properties
+      const { data: userProperties } = await admin
+        .from('user_properties')
+        .select('property_id')
+        .eq('user_id', userId);
+
+      // If user has no assigned properties, return empty invoices
+      if (!userProperties || userProperties.length === 0) {
+        return NextResponse.json({ ok: true, invoices: [] });
+      }
+    }
+  }
+
   let query = admin
     .from('invoices')
-    .select('id, invoice_number, bill_month, amount_due_cents, status, property_id')
-    .eq('org_id', orgId)
-    .order('bill_month', { ascending: false });
+    .select('id, invoice_number, bill_month, amount_due_cents, status, property_id, user_id')
+    .eq('org_id', orgId);
+
+  // If authenticated member, filter to only their invoices
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  query = query.order('bill_month', { ascending: false });
 
   // If from == to, just eq that month; else use [from, to+1month)
   if (from === to) {

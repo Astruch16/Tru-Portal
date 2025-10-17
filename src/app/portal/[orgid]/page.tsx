@@ -140,11 +140,23 @@ export default async function PortalPage({
     k = filtered[0] ?? null;
   } catch { k = null; }
 
-  // Invoices - fetch entire year to ensure we see all generated invoices
+  // Invoices - fetch entire year with authentication to get user-specific invoices
   const currentYear = new Date().getFullYear();
-  const invRes = await fetch(`${base}/api/orgs/${orgId}/invoices/list?from=${currentYear}-01&to=${currentYear}-12`, { cache: 'no-store' });
   let invoices: Invoice[] = [];
   try {
+    const { supabaseServer } = await import('@/lib/supabase/server');
+    const sb = await supabaseServer();
+    const { data: { session } } = await sb.auth.getSession();
+
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
+    const invRes = await fetch(`${base}/api/orgs/${orgId}/invoices/list?from=${currentYear}-01&to=${currentYear}-12`, {
+      cache: 'no-store',
+      headers
+    });
     const invJson = await invRes.json();
     let invList: unknown[] = [];
     if (isRecord(invJson) && Array.isArray((invJson as { invoices?: unknown[] }).invoices)) {
@@ -153,10 +165,22 @@ export default async function PortalPage({
     invoices = invList.filter(isInvoice);
   } catch { invoices = []; }
 
-  // Properties
-  const propRes = await fetch(`${base}/api/orgs/${orgId}/properties/list`, { cache: 'no-store' });
+  // Properties - fetch with authentication to get user-specific properties
   let properties: Property[] = [];
   try {
+    const { supabaseServer } = await import('@/lib/supabase/server');
+    const sb = await supabaseServer();
+    const { data: { session } } = await sb.auth.getSession();
+
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
+    const propRes = await fetch(`${base}/api/orgs/${orgId}/properties/list`, {
+      cache: 'no-store',
+      headers
+    });
     const propJson = await propRes.json();
     let propList: unknown[] = [];
     if (isRecord(propJson) && Array.isArray((propJson as { properties?: unknown[] }).properties)) {

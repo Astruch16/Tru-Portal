@@ -71,11 +71,15 @@ export async function POST(req: NextRequest, { params }: { params: { orgid?: str
   let invoice = data as Record<string, unknown> | null;
   const wasNewlyCreated = invoice && !invoice.sent_at;
 
-  // If this is a new invoice and we have a user_id, update the invoice to set the user_id
-  if (wasNewlyCreated && invoice && userId) {
+  // If this is a new invoice and we have a user_id or property_id, update the invoice
+  if (wasNewlyCreated && invoice && (userId || propertyId)) {
+    const updateData: Record<string, string> = {};
+    if (userId) updateData.user_id = userId;
+    if (propertyId) updateData.property_id = propertyId;
+
     const { data: updatedInvoice } = await admin
       .from('invoices')
-      .update({ user_id: userId })
+      .update(updateData)
       .eq('id', invoice.id as string)
       .select()
       .single();

@@ -25,14 +25,44 @@ export async function GET(
       auth: { persistSession: false }
     });
 
+    // Check if this request is from a member portal (has auth header)
+    const authHeader = req.headers.get('authorization');
+    let userPropertyIds: string[] = [];
+
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await admin.auth.getUser(token);
+
+      if (user) {
+        // Get properties assigned to this user
+        const { data: userProperties } = await admin
+          .from('user_properties')
+          .select('property_id')
+          .eq('user_id', user.id);
+
+        if (userProperties && userProperties.length > 0) {
+          userPropertyIds = userProperties.map(up => up.property_id);
+        } else {
+          // User has no assigned properties, return empty array
+          return NextResponse.json({ ok: true, receipts: [] });
+        }
+      }
+    }
+
     // Build query
     let query = admin
       .from('receipts')
       .select('*')
-      .eq('org_id', orgId)
-      .order('date_added', { ascending: false });
+      .eq('org_id', orgId);
 
-    // Filter by property if specified
+    // Filter by user's assigned properties if authenticated member
+    if (userPropertyIds.length > 0) {
+      query = query.in('property_id', userPropertyIds);
+    }
+
+    query = query.order('date_added', { ascending: false });
+
+    // Filter by property if specified (additional filter on top of user properties)
     if (propertyId) {
       query = query.eq('property_id', extractUUID(propertyId));
     }

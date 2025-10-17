@@ -70,22 +70,51 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   // Get the active plan for this invoice's month
+  // If invoice has user_id, get user-specific plan; otherwise get org plan
   const invoiceMonth = new Date(inv.bill_month);
-  const { data: plan } = await admin
+  let planQuery = admin
     .from('plans')
     .select('*')
     .eq('org_id', inv.org_id)
     .lte('effective_date', inv.bill_month)
     .order('effective_date', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  // Filter by user_id if invoice is user-specific
+  if (userIdForBilling) {
+    planQuery = planQuery.eq('user_id', userIdForBilling);
+  }
+
+  let { data: plan } = await planQuery.maybeSingle();
+
+  // If no plan found with date filter and we have a user_id, try getting the most recent plan for the user
+  if (!plan && userIdForBilling) {
+    const { data: fallbackPlan } = await admin
+      .from('plans')
+      .select('*')
+      .eq('org_id', inv.org_id)
+      .eq('user_id', userIdForBilling)
+      .order('effective_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    plan = fallbackPlan;
+  }
 
   // Get KPIs to calculate gross revenue and expenses
-  const { data: kpis } = await admin
+  // If invoice has user_id, get user-specific KPIs; otherwise get all org KPIs
+  let kpisQuery = admin
     .from('kpis')
     .select('*')
     .eq('org_id', inv.org_id)
     .eq('month', inv.bill_month);
+
+  // Filter by user_id if invoice is user-specific
+  if (userIdForBilling) {
+    kpisQuery = kpisQuery.eq('user_id', userIdForBilling);
+  }
+
+  const { data: kpis } = await kpisQuery;
 
   // Calculate totals from KPIs
   const grossRevenue = kpis?.reduce((sum, k) => sum + (k.gross_revenue_cents || 0), 0) || 0;

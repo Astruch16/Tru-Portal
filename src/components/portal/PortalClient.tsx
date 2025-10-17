@@ -166,7 +166,13 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
   // Fetch ledger entries
   const fetchLedgerEntries = async () => {
     try {
-      const response = await fetch(`/api/orgs/${orgId}/ledger`);
+      const { data: { session } } = await sb.auth.getSession();
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch(`/api/orgs/${orgId}/ledger`, { headers });
       const data = await response.json();
       console.log('Member portal - Fetched ledger entries:', data);
       if (data.ok && data.entries) {

@@ -51,6 +51,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ orgi
 
         if (error) return NextResponse.json({ error: error.message }, { status: 400 });
         return NextResponse.json({ ok: true, bookings: data ?? [] });
+      } else {
+        // User has no assigned properties, return empty array
+        return NextResponse.json({ ok: true, bookings: [] });
       }
     }
   }

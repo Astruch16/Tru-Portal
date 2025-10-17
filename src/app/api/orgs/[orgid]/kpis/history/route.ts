@@ -77,7 +77,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ orgi
   const propertyIds = userProps?.map(up => up.property_id) || [];
 
   if (propertyIds.length === 0) {
-    return NextResponse.json({ ok: true, kpis: data || [], orgId });
+    return NextResponse.json({ ok: true, kpis: [], orgId });
   }
 
   // Filter KPIs to only include user's data and recalculate booking-related metrics

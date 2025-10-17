@@ -166,7 +166,18 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
     async function fetchHistory() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/orgs/${orgId}/kpis/history?months=12`);
+
+        // Get authenticated user session
+        const { supabaseClient } = await import('@/lib/supabase/client');
+        const sb = supabaseClient();
+        const { data: { session } } = await sb.auth.getSession();
+
+        const headers: HeadersInit = { 'Content-Type': 'application/json' };
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+
+        const res = await fetch(`/api/orgs/${orgId}/kpis/history?months=12`, { headers });
         const data = await res.json();
 
         if (!res.ok) {
@@ -200,7 +211,17 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
       try {
         // Fetch ledger entries for revenue/expenses
         if (metricType === 'gross_revenue' || metricType === 'expenses' || metricType === 'net_revenue') {
-          const response = await fetch(`/api/orgs/${orgId}/ledger`);
+          // Get authenticated user session
+          const { supabaseClient } = await import('@/lib/supabase/client');
+          const sb = supabaseClient();
+          const { data: { session } } = await sb.auth.getSession();
+
+          const headers: HeadersInit = { 'Content-Type': 'application/json' };
+          if (session?.access_token) {
+            headers['Authorization'] = `Bearer ${session.access_token}`;
+          }
+
+          const response = await fetch(`/api/orgs/${orgId}/ledger`, { headers });
           const data = await response.json();
 
           if (data.ok && data.entries) {
@@ -218,28 +239,23 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
           // Get authenticated user
           const { supabaseClient } = await import('@/lib/supabase/client');
           const sb = supabaseClient();
-          const { data: { user } } = await sb.auth.getUser();
+          const { data: { session } } = await sb.auth.getSession();
 
-          if (user) {
-            // Get user's property assignments from Supabase
-            const { data: userProperties } = await sb
-              .from('user_properties')
-              .select('property_id')
-              .eq('user_id', user.id);
+          if (session) {
+            const headers: HeadersInit = { 'Content-Type': 'application/json' };
+            if (session?.access_token) {
+              headers['Authorization'] = `Bearer ${session.access_token}`;
+            }
 
-            const userPropertyIds = userProperties?.map((up) => up.property_id) || [];
-
-            // Fetch all bookings
-            const response = await fetch(`/api/orgs/${orgId}/bookings`);
+            // Fetch bookings with auth (API will filter by user's properties)
+            const response = await fetch(`/api/orgs/${orgId}/bookings`, { headers });
             const data = await response.json();
 
-            if (data.ok && data.bookings && userPropertyIds.length > 0) {
-              // Filter bookings for user's properties and selected month
+            if (data.ok && data.bookings) {
+              // Filter bookings for selected month and completed status
               const filtered = data.bookings.filter((booking: any) => {
                 const bookingMonth = booking.check_in.slice(0, 7) + '-01';
-                return bookingMonth === selectedMonth &&
-                       booking.status === 'completed' &&
-                       userPropertyIds.includes(booking.property_id);
+                return bookingMonth === selectedMonth && booking.status === 'completed';
               });
               setMonthlyBookings(filtered);
             }

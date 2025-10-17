@@ -77,11 +77,21 @@ export default function ReceiptsModal({
   const fetchReceipts = async () => {
     setLoading(true);
     try {
+      const { supabaseClient } = await import('@/lib/supabase/client');
+      const sb = supabaseClient();
+      const { data: { session } } = await sb.auth.getSession();
+
       let url = `/api/orgs/${orgId}/receipts?month=${selectedMonth}`;
       if (selectedPropertyId) {
         url += `&propertyId=${selectedPropertyId}`;
       }
-      const response = await fetch(url);
+
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch(url, { headers });
       const data = await response.json();
       if (data.ok) {
         setReceipts(data.receipts || []);
