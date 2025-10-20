@@ -8,10 +8,7 @@ CREATE TABLE IF NOT EXISTS messages (
   recipient_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   message_text TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  read_at TIMESTAMPTZ,
-
-  -- Add indexes for better query performance
-  CONSTRAINT messages_org_id_fkey FOREIGN KEY (org_id) REFERENCES orgs(id) ON DELETE CASCADE
+  read_at TIMESTAMPTZ
 );
 
 -- Create indexes for faster queries
