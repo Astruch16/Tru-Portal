@@ -428,6 +428,20 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
 
             {/* Toggle Navigation & Logout */}
             <div className="flex items-center gap-3">
+              {/* Message Icon */}
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="relative hover:bg-muted/50 transition-all duration-300"
+              >
+                <Link href={`/portal/${orgId}/messages`} className="flex items-center justify-center">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ minWidth: '22px', minHeight: '22px' }}>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  {/* TODO: Add unread badge here */}
+                </Link>
+              </Button>
               <div className="flex items-center gap-2 bg-muted/30 rounded-lg p-1 border border-border">
                 <Button
                   asChild
