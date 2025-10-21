@@ -124,6 +124,16 @@ export default function AdminPage() {
   const [receiptFilterMonth, setReceiptFilterMonth] = useState('all');
   const [receiptFilterProperty, setReceiptFilterProperty] = useState('all');
 
+  // --- Reviews state ---
+  const [reviewPropertyId, setReviewPropertyId] = useState('');
+  const [reviewPlatform, setReviewPlatform] = useState<'airbnb' | 'vrbo'>('airbnb');
+  const [reviewRating, setReviewRating] = useState('');
+  const [reviewText, setReviewText] = useState('');
+  const [reviewDate, setReviewDate] = useState(new Date().toISOString().slice(0, 10));
+  const [busyReview, setBusyReview] = useState(false);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+
   // --- User modal state ---
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -318,6 +328,7 @@ export default function AdminPage() {
       fetchInvoices();
       fetchLedgerEntries();
       fetchReceipts();
+      fetchReviews();
     }
   }, [orgId]);
 
@@ -755,6 +766,89 @@ export default function AdminPage() {
       }
     } catch (e) {
       setMsg(`Network error: ${(e as Error).message}`);
+    }
+  }
+
+  // --- Review actions ---
+  async function fetchReviews() {
+    setLoadingReviews(true);
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return;
+
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const res = await fetch(`/api/orgs/${orgId}/reviews`, { headers });
+      const j = await res.json();
+      if (j.ok) {
+        setReviews(j.reviews || []);
+      }
+    } catch (e) {
+      console.error('Error fetching reviews:', e);
+    } finally {
+      setLoadingReviews(false);
+    }
+  }
+
+  async function addReview() {
+    if (!reviewPropertyId || !reviewRating || !reviewDate) {
+      setMsg('Please fill in property, rating, and date');
+      return;
+    }
+
+    const rating = parseFloat(reviewRating);
+    const maxRating = reviewPlatform === 'airbnb' ? 5 : 10;
+
+    if (isNaN(rating) || rating < 0 || rating > maxRating) {
+      setMsg(`Rating must be between 0 and ${maxRating} for ${reviewPlatform}`);
+      return;
+    }
+
+    setBusyReview(true);
+    setMsg('Adding review...');
+
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
+        setMsg('Not authenticated');
+        return;
+      }
+
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const res = await fetch(`/api/orgs/${orgId}/reviews`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          property_id: reviewPropertyId,
+          platform: reviewPlatform,
+          rating,
+          review_text: reviewText || null,
+          review_date: reviewDate,
+        }),
+      });
+
+      const j = await res.json();
+      if (res.ok) {
+        setMsg('✓ Review added successfully');
+        setReviewPropertyId('');
+        setReviewRating('');
+        setReviewText('');
+        setReviewDate(new Date().toISOString().slice(0, 10));
+        fetchReviews();
+      } else {
+        setMsg(`Error: ${j.error || 'Failed to add review'}`);
+      }
+    } catch (e) {
+      setMsg(`Network error: ${(e as Error).message}`);
+    } finally {
+      setBusyReview(false);
     }
   }
 
@@ -3371,6 +3465,162 @@ export default function AdminPage() {
                   </div>
                 </div>
               </CollapsibleSection>
+            </div>
+          </CollapsibleSection>
+
+          {/* Reviews Section */}
+          <CollapsibleSection
+            title="Reviews"
+            description="Manage property reviews from Airbnb and VRBO"
+            icon={
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+            }
+          >
+            <div className="space-y-6">
+              {/* Add Review Form */}
+              <Card className="border-border/50">
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold mb-4 text-foreground">Add New Review</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="review-property" className="text-foreground">Property</Label>
+                      <select
+                        id="review-property"
+                        value={reviewPropertyId}
+                        onChange={(e) => setReviewPropertyId(e.target.value)}
+                        className="w-full mt-1 p-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">Select property…</option>
+                        {properties.map((prop) => (
+                          <option key={prop.id} value={prop.id}>
+                            {prop.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="review-platform" className="text-foreground">Platform</Label>
+                      <select
+                        id="review-platform"
+                        value={reviewPlatform}
+                        onChange={(e) => setReviewPlatform(e.target.value as 'airbnb' | 'vrbo')}
+                        className="w-full mt-1 p-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="airbnb">Airbnb (out of 5)</option>
+                        <option value="vrbo">VRBO (out of 10)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="review-rating" className="text-foreground">
+                        Rating (0-{reviewPlatform === 'airbnb' ? '5' : '10'})
+                      </Label>
+                      <Input
+                        id="review-rating"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max={reviewPlatform === 'airbnb' ? '5' : '10'}
+                        value={reviewRating}
+                        onChange={(e) => setReviewRating(e.target.value)}
+                        placeholder={`e.g., ${reviewPlatform === 'airbnb' ? '4.5' : '9.0'}`}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="review-date" className="text-foreground">Review Date</Label>
+                      <Input
+                        id="review-date"
+                        type="date"
+                        value={reviewDate}
+                        onChange={(e) => setReviewDate(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <Label htmlFor="review-text" className="text-foreground">Review Text (Optional)</Label>
+                      <textarea
+                        id="review-text"
+                        value={reviewText}
+                        onChange={(e) => setReviewText(e.target.value)}
+                        placeholder="Enter the review text..."
+                        rows={3}
+                        className="w-full mt-1 p-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={addReview}
+                    disabled={busyReview}
+                    className="mt-4"
+                  >
+                    {busyReview ? 'Adding...' : 'Add Review'}
+                  </Button>
+                </div>
+              </Card>
+
+              {/* Reviews List */}
+              <Card className="border-border/50">
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold mb-4 text-foreground">
+                    All Reviews ({reviews.length})
+                  </h3>
+
+                  {loadingReviews ? (
+                    <div className="text-center py-8 text-muted-foreground">Loading reviews...</div>
+                  ) : reviews.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No reviews yet</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {reviews.map((review) => (
+                        <Card key={review.id} className="border-border/50 bg-card/50">
+                          <div className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <Badge variant="secondary" className="capitalize">
+                                    {review.properties?.name || 'Unknown Property'}
+                                  </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className={review.platform === 'airbnb' ? 'border-pink-500 text-pink-700' : 'border-blue-500 text-blue-700'}
+                                  >
+                                    {review.platform === 'airbnb' ? 'Airbnb' : 'VRBO'}
+                                  </Badge>
+                                  <div className="flex items-center gap-1">
+                                    <svg className="w-4 h-4 text-yellow-500 fill-current" viewBox="0 0 24 24">
+                                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                    </svg>
+                                    <span className="font-bold text-foreground">
+                                      {review.rating} / {review.platform === 'airbnb' ? '5' : '10'}
+                                    </span>
+                                  </div>
+                                  <span className="text-sm text-muted-foreground">
+                                    {new Date(review.review_date).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric'
+                                    })}
+                                  </span>
+                                </div>
+                                {review.review_text && (
+                                  <p className="text-sm text-muted-foreground mt-2">{review.review_text}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Card>
             </div>
           </CollapsibleSection>
 

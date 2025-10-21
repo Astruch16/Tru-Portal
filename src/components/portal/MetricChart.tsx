@@ -659,10 +659,12 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                             angle={-45}
                             textAnchor="end"
                             height={80}
+                            label={{ value: 'Month', position: 'insideBottom', offset: -50 }}
                           />
                           <YAxis
                             stroke="#6b7280"
                             style={{ fontSize: 12, fontWeight: 500 }}
+                            label={{ value: config.dataKey.includes('cents') ? 'Amount ($)' : 'Value', angle: -90, position: 'insideLeft' }}
                             tickFormatter={(value) => {
                               if (config.dataKey.includes('cents')) {
                                 const dollars = value / 100;

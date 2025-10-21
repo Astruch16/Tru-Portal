@@ -500,7 +500,7 @@ export default function AdminMessagesPage({ params }: { params: Promise<{ orgid:
                           className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
                         >
                           <div className="flex flex-col">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className={`flex items-center gap-2 mb-1 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
                               <span className="text-xs font-medium text-muted-foreground">
                                 {isCurrentUser ? 'You' : selectedConversation.userName}
                               </span>

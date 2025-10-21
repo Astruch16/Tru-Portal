@@ -97,14 +97,22 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
   const [isInvoicesExpanded, setIsInvoicesExpanded] = useState(true);
   const [isRevenueExpanded, setIsRevenueExpanded] = useState(true);
   const [isBookingsExpanded, setIsBookingsExpanded] = useState(true);
+  const [isReviewsExpanded, setIsReviewsExpanded] = useState(true);
 
   // Unread messages count
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // User info
+  const [userName, setUserName] = useState<string>('');
 
   // Bookings state
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingFilterStatus, setBookingFilterStatus] = useState<string>('all');
   const [expandedBookingStatuses, setExpandedBookingStatuses] = useState<Set<string>>(new Set(['upcoming', 'completed', 'cancelled']));
+
+  // Reviews state
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
 
   // Generate month options (January to December of current year)
   const generateMonthOptions = () => {
@@ -214,6 +222,30 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
     }
   };
 
+  const fetchReviews = async () => {
+    setLoadingReviews(true);
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch(`/api/orgs/${orgId}/reviews`, { headers });
+      const data = await response.json();
+      if (data.ok && data.reviews) {
+        setReviews(data.reviews);
+      } else {
+        setReviews([]);
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      setReviews([]);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
   // Fetch property-specific KPIs when a property is selected
   useEffect(() => {
     if (!selectedPropertyId) {
@@ -244,11 +276,36 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
     fetchPropertyKpi();
   }, [selectedPropertyId, orgId, month]);
 
+  // Fetch user name on mount
+  useEffect(() => {
+    const fetchUserName = async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await sb
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', user.id)
+          .single();
+
+        if (profile) {
+          setUserName(profile.first_name || 'there');
+        }
+      } catch (error) {
+        console.error('Error fetching user name:', error);
+      }
+    };
+
+    fetchUserName();
+  }, []);
+
   // Fetch ledger entries and bookings on mount
   useEffect(() => {
     fetchLedgerEntries();
     fetchBookings();
     fetchUnreadCount();
+    fetchReviews();
   }, [orgId]);
 
   // Fetch unread messages count
@@ -266,12 +323,20 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
       const data = await response.json();
 
       if (data.ok) {
-        setUnreadCount(data.count || 0);
+        setUnreadCount(data.unreadCount || 0);
       }
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }
   };
+
+  // Poll for unread messages every 30 seconds
+  useEffect(() => {
+    if (!orgId) return;
+
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [orgId]);
 
   // Fetch annual KPIs when view mode changes to annual
   useEffect(() => {
@@ -612,6 +677,15 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Personalized Greeting */}
+        {userName && (
+          <div className="mb-6 animate-fade-in">
+            <h2 className="text-3xl font-bold text-foreground">
+              Hi {userName},
+            </h2>
+          </div>
+        )}
+
         {/* KPI Cards */}
         <div className="mb-8 animate-fade-in">
           <div className="mb-6">
@@ -1233,6 +1307,193 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
             </div>
           )}
           </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mb-8 animate-fade-in">
+          <div className="mb-6">
+            <button
+              onClick={() => setIsReviewsExpanded(!isReviewsExpanded)}
+              className="w-full flex items-center gap-3 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2 cursor-pointer"
+            >
+              <svg
+                className={`w-5 h-5 text-primary transition-transform duration-300 ${isReviewsExpanded ? 'rotate-90' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+                Reviews
+              </h2>
+            </button>
+          </div>
+
+          {isReviewsExpanded && (
+            <div className="space-y-4 animate-fade-in">
+              {loadingReviews ? (
+                <Card className="shadow-md animate-fade-in" style={{ border: '1px solid #E1ECDB' }}>
+                  <CardContent className="py-8">
+                    <div className="text-center text-muted-foreground">Loading reviews...</div>
+                  </CardContent>
+                </Card>
+              ) : reviews.length === 0 ? (
+                <Card className="shadow-md animate-fade-in" style={{ border: '1px solid #E1ECDB' }}>
+                  <CardContent className="py-8">
+                    <div className="text-center text-muted-foreground">No reviews yet</div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  {/* Calculate average ratings */}
+                  {(() => {
+                    // Filter reviews by selected property and month
+                    let filteredReviews = reviews;
+
+                    // Filter by selected property if one is selected
+                    if (selectedPropertyId) {
+                      filteredReviews = filteredReviews.filter(r => r.property_id === selectedPropertyId);
+                    }
+
+                    // Filter by month (reviews from that month)
+                    if (month) {
+                      filteredReviews = filteredReviews.filter(r => {
+                        const reviewMonth = r.review_date.slice(0, 7); // YYYY-MM
+                        return reviewMonth === month.slice(0, 7); // YYYY-MM
+                      });
+                    }
+
+                    const airbnbReviews = filteredReviews.filter(r => r.platform === 'airbnb');
+                    const vrboReviews = filteredReviews.filter(r => r.platform === 'vrbo');
+
+                    const avgAirbnb = airbnbReviews.length > 0
+                      ? (airbnbReviews.reduce((sum, r) => sum + r.rating, 0) / airbnbReviews.length).toFixed(1)
+                      : null;
+
+                    const avgVrbo = vrboReviews.length > 0
+                      ? (vrboReviews.reduce((sum, r) => sum + r.rating, 0) / vrboReviews.length).toFixed(1)
+                      : null;
+
+                    // If no reviews match the filters, show a message
+                    if (filteredReviews.length === 0) {
+                      return (
+                        <Card className="shadow-md animate-fade-in" style={{ border: '1px solid #E1ECDB' }}>
+                          <CardContent className="py-8">
+                            <div className="text-center text-muted-foreground">
+                              No reviews found for {selectedPropertyId ? 'this property' : 'this month'}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    }
+
+                    return (
+                      <>
+                        {/* Summary Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                          <Card className="shadow-md hover:shadow-lg transition-shadow animate-fade-in" style={{ border: '2px solid #E1ECDB' }}>
+                            <CardContent className="pt-6">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-muted-foreground">Total Reviews</span>
+                                <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                </svg>
+                              </div>
+                              <div className="text-4xl font-bold text-primary">{filteredReviews.length}</div>
+                            </CardContent>
+                          </Card>
+
+                          {avgAirbnb && (
+                            <Card className="shadow-md hover:shadow-lg transition-shadow animate-fade-in" style={{ border: '2px solid #E1ECDB' }}>
+                              <CardContent className="pt-6">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-sm font-medium text-muted-foreground">Airbnb Avg</span>
+                                  <Badge variant="outline" className="border-pink-500 text-pink-700">Airbnb</Badge>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="text-4xl font-bold text-primary">{avgAirbnb}</div>
+                                  <span className="text-lg text-muted-foreground">/ 5</span>
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">{airbnbReviews.length} reviews</div>
+                              </CardContent>
+                            </Card>
+                          )}
+
+                          {avgVrbo && (
+                            <Card className="shadow-md hover:shadow-lg transition-shadow animate-fade-in" style={{ border: '2px solid #E1ECDB' }}>
+                              <CardContent className="pt-6">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-sm font-medium text-muted-foreground">VRBO Avg</span>
+                                  <Badge variant="outline" className="border-blue-500 text-blue-700">VRBO</Badge>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="text-4xl font-bold text-primary">{avgVrbo}</div>
+                                  <span className="text-lg text-muted-foreground">/ 10</span>
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">{vrboReviews.length} reviews</div>
+                              </CardContent>
+                            </Card>
+                          )}
+                        </div>
+
+                        {/* Reviews List */}
+                        <div className="space-y-3">
+                          {filteredReviews.map((review) => (
+                            <Card key={review.id} className="shadow-md hover:shadow-lg transition-shadow animate-fade-in" style={{ border: '1px solid #E1ECDB' }}>
+                              <CardContent className="pt-6">
+                                <div className="flex items-start justify-between mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <Badge variant="secondary" className="capitalize">
+                                      {review.properties?.name || 'Unknown Property'}
+                                    </Badge>
+                                    <Badge
+                                      variant="outline"
+                                      className={review.platform === 'airbnb' ? 'border-pink-500 text-pink-700' : 'border-blue-500 text-blue-700'}
+                                    >
+                                      {review.platform === 'airbnb' ? 'Airbnb' : 'VRBO'}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <svg className="w-5 h-5 text-yellow-500 fill-current" viewBox="0 0 24 24">
+                                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                    </svg>
+                                    <span className="text-xl font-bold text-foreground">
+                                      {review.rating}
+                                    </span>
+                                    <span className="text-sm text-muted-foreground">
+                                      / {review.platform === 'airbnb' ? '5' : '10'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="text-sm text-muted-foreground mb-2">
+                                  {new Date(review.review_date).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })}
+                                </div>
+
+                                {review.review_text && (
+                                  <p className="text-sm text-foreground mt-3 p-3 bg-muted/30 rounded-lg border border-border">
+                                    {review.review_text}
+                                  </p>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <Card className="border-dashed bg-muted/20 animate-fade-in" style={{ animationDelay: '600ms', borderColor: '#E1ECDB' }}>
