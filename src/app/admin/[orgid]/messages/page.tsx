@@ -166,8 +166,6 @@ export default function AdminMessagesPage({ params }: { params: Promise<{ orgid:
       const response = await fetch(`/api/orgs/${orgId}/messages/conversations`, { headers });
       const data = await response.json();
 
-      console.log('Admin fetchConversations - Response:', data);
-
       if (data.ok && data.conversations) {
         setConversations(data.conversations);
 

@@ -48,8 +48,7 @@ export async function GET(
         message_text,
         created_at,
         read_at,
-        sender:sender_id(id, email),
-        recipient:recipient_id(id, email)
+        property_id
       `)
       .eq('org_id', orgId)
       .order('created_at', { ascending: true });
@@ -69,6 +68,11 @@ export async function GET(
     if (error) {
       console.error('Error fetching messages:', error);
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    console.log(`Messages GET - User: ${userId}, Found ${messages?.length || 0} messages`);
+    if (messages && messages.length > 0) {
+      console.log('First message:', messages[0]);
     }
 
     return NextResponse.json({ ok: true, messages: messages || [] });
@@ -117,7 +121,7 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { recipientId, messageText } = body;
+  const { recipientId, messageText, propertyId } = body;
 
   if (!recipientId || !messageText || typeof messageText !== 'string' || messageText.trim() === '') {
     return NextResponse.json({ error: 'recipientId and messageText are required' }, { status: 400 });
@@ -131,6 +135,7 @@ export async function POST(
         sender_id: userId,
         recipient_id: recipientId,
         message_text: messageText.trim(),
+        property_id: propertyId || null,
       })
       .select()
       .single();

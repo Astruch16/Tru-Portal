@@ -31,6 +31,7 @@ export default function AdminPage() {
 
   // --- Shared UI state ---
   const [msg, setMsg] = useState<string | null>(null);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
   // --- Generate state ---
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
@@ -842,6 +843,41 @@ export default function AdminPage() {
     }
   }
 
+  // Fetch unread messages count
+  const fetchUnreadMessages = async () => {
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user || !orgId) return;
+
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return;
+
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch(`/api/orgs/${orgId}/messages/unread`, { headers });
+      const data = await response.json();
+
+      if (data.ok) {
+        setUnreadMessagesCount(data.unreadCount || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching unread messages:', error);
+    }
+  };
+
+  // Fetch unread messages on mount
+  useEffect(() => {
+    if (orgId) {
+      fetchUnreadMessages();
+      // Poll for new messages every 30 seconds
+      const interval = setInterval(fetchUnreadMessages, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [orgId]);
+
   // Function to get icon based on property type
   const getPropertyIcon = (type: string) => {
     switch(type) {
@@ -923,18 +959,37 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
-            {/* Logout Button */}
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              size="sm"
-              className="border-border hover:border-destructive hover:text-destructive hover:bg-destructive/5 transition-all duration-300 cursor-pointer"
-            >
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mr-2">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              Logout
-            </Button>
+            <div className="flex items-center gap-3">
+              {/* Messages Button */}
+              <Button
+                onClick={() => router.push(`/admin/${orgId}/messages`)}
+                variant="outline"
+                size="sm"
+                className="border-border hover:bg-primary/5 hover:border-primary transition-all duration-300 cursor-pointer relative"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="mr-2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                Messages
+                {unreadMessagesCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                    {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                  </span>
+                )}
+              </Button>
+              {/* Logout Button */}
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                size="sm"
+                className="border-border hover:border-destructive hover:text-destructive hover:bg-destructive/5 transition-all duration-300 cursor-pointer"
+              >
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mr-2">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Logout
+              </Button>
+            </div>
           </div>
 
           <Separator className="mt-1 mb-4 bg-border" />
