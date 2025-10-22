@@ -246,6 +246,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
     }
   };
 
+
   // Fetch property-specific KPIs when a property is selected
   useEffect(() => {
     if (!selectedPropertyId) {
@@ -792,363 +793,6 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
           </div>
         </div>
 
-        {/* Invoices */}
-        <div className="mb-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
-          <button
-            onClick={() => setIsInvoicesExpanded(!isInvoicesExpanded)}
-            className="w-full flex items-center gap-3 mb-6 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2 cursor-pointer"
-          >
-            <svg
-              className={`w-5 h-5 text-primary transition-transform duration-300 ${isInvoicesExpanded ? 'rotate-90' : ''}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Invoices
-              {invoices.length > 0 && (
-                <Badge variant="outline" className="ml-2 bg-primary/5 border-primary/30 text-black">
-                  {invoices.length}
-                </Badge>
-              )}
-            </h2>
-          </button>
-          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isInvoicesExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-          <div className="flex items-center justify-between mb-6">
-            {/* Month Filter */}
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Filter:</span>
-              <select
-                value={invoiceFilterMonth}
-                onChange={(e) => setInvoiceFilterMonth(e.target.value)}
-                className="h-9 rounded-md border border-border bg-background px-3 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
-              >
-                <option value="all">All Months</option>
-                {(() => {
-                  const months = new Set<string>();
-                  invoices.forEach(invoice => {
-                    const month = invoice.bill_month?.slice(0, 7);
-                    if (month) months.add(month);
-                  });
-                  return Array.from(months).sort().reverse().map(month => {
-                    const [year, monthNum] = month.split('-').map(Number);
-                    const label = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                    return <option key={month} value={month}>{label}</option>;
-                  });
-                })()}
-              </select>
-            </div>
-          </div>
-          {invoices.length === 0 ? (
-            <Card className="border-border bg-card shadow-sm">
-              <CardContent className="py-8 text-center text-muted-foreground">
-                No invoices yet.
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {(() => {
-                // Filter invoices by selected month
-                const filteredInvoices = invoiceFilterMonth === 'all'
-                  ? invoices
-                  : invoices.filter(invoice => invoice.bill_month?.slice(0, 7) === invoiceFilterMonth);
-
-                // Group invoices by month
-                const grouped = filteredInvoices.reduce((acc: Record<string, any[]>, invoice) => {
-                  const month = invoice.bill_month?.slice(0, 7) || 'no-date'; // YYYY-MM
-                  if (!acc[month]) acc[month] = [];
-                  acc[month].push(invoice);
-                  return acc;
-                }, {});
-
-                return Object.entries(grouped).map(([month, monthInvoices]) => {
-                  // Parse YYYY-MM to avoid timezone issues
-                  const [year, monthNum] = month.split('-').map(Number);
-                  const monthLabel = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                  const paidCount = monthInvoices.filter(i => i.status === 'paid').length;
-                  const totalDue = monthInvoices.reduce((sum, i) => sum + (i.amount_due_cents || 0), 0);
-
-                  const isExpanded = expandedInvoiceMonths.has(month);
-
-                  return (
-                    <div key={month} className="border border-border/50 rounded-lg bg-gradient-to-r from-muted/20 to-muted/10">
-                      {/* Month Header - Clickable */}
-                      <button
-                        onClick={() => toggleInvoiceMonthExpanded(month)}
-                        className="w-full p-4 flex items-center justify-between hover:bg-muted/20 transition-colors cursor-pointer text-left"
-                      >
-                        <div className="flex items-center gap-2">
-                          <svg
-                            className={`w-4 h-4 text-primary transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                          <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <h4 className="text-sm font-semibold text-foreground">
-                            {monthLabel}
-                          </h4>
-                          <Badge variant="outline" className="text-xs">{monthInvoices.length}</Badge>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs">
-                          <span className="text-muted-foreground">{paidCount} paid / {monthInvoices.length} total</span>
-                          <span className="font-medium">${(totalDue / 100).toFixed(2)}</span>
-                        </div>
-                      </button>
-
-                      {/* Invoices for this month - Collapsible */}
-                      {isExpanded && (
-                        <div className="px-4 pb-4 space-y-2">
-                          {monthInvoices.map((inv) => (
-                            <Card key={inv.id} className="group hover:shadow-md transition-all duration-200 border-border/50 bg-card">
-                              <div className="p-3">
-                                {/* Header Row */}
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    <p className="text-sm font-medium text-foreground">
-                                      Invoice #{inv.invoice_number ?? inv.id.slice(0, 8)}
-                                    </p>
-                                  </div>
-                                  <Badge
-                                    variant={
-                                      inv.status === 'paid'
-                                        ? 'default'
-                                        : inv.status === 'void'
-                                        ? 'destructive'
-                                        : 'secondary'
-                                    }
-                                    className={
-                                      inv.status === 'paid'
-                                        ? 'bg-green-100 text-green-800 border-green-300'
-                                        : inv.status === 'void'
-                                        ? ''
-                                        : 'bg-red-100 text-red-800 border-red-300'
-                                    }
-                                  >
-                                    {inv.status === 'paid' ? 'PAID' : inv.status === 'void' ? 'VOID' : 'DUE'}
-                                  </Badge>
-                                </div>
-
-                                {/* Details Row */}
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <span>{inv.bill_month}</span>
-                                  </div>
-                                  <p className="text-base font-bold text-foreground">
-                                    {formatMoney(inv.amount_due_cents)}
-                                  </p>
-                                </div>
-
-                                {/* Actions Row */}
-                                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
-                                  <Button variant="link" size="sm" asChild className="h-auto p-0 text-primary hover:text-primary/80 cursor-pointer text-xs">
-                                    <a href={`/api/invoices/${inv.id}/pdf`} className="cursor-pointer">View PDF</a>
-                                  </Button>
-                                  <span className="text-muted-foreground">•</span>
-                                  <Button variant="link" size="sm" asChild className="h-auto p-0 text-primary hover:text-primary/80 cursor-pointer text-xs">
-                                    <a href={`/api/invoices/${inv.id}/pdf-link`} className="cursor-pointer">Get Link</a>
-                                  </Button>
-                                </div>
-                              </div>
-                            </Card>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          )}
-          </div>
-        </div>
-
-        {/* Revenue & Expenses */}
-        <div className="mb-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
-          <button
-            onClick={() => setIsRevenueExpanded(!isRevenueExpanded)}
-            className="w-full flex items-center gap-3 mb-6 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2 cursor-pointer"
-          >
-            <svg
-              className={`w-5 h-5 text-primary transition-transform duration-300 ${isRevenueExpanded ? 'rotate-90' : ''}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Revenue & Expenses
-              {ledgerEntries.length > 0 && (
-                <Badge variant="outline" className="ml-2 bg-primary/5 border-primary/30 text-black">
-                  {ledgerEntries.length}
-                </Badge>
-              )}
-            </h2>
-          </button>
-          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isRevenueExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-          <div className="flex items-center justify-between mb-6">
-            {/* Month Filter */}
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Filter:</span>
-              <select
-                value={ledgerFilterMonth}
-                onChange={(e) => setLedgerFilterMonth(e.target.value)}
-                className="h-9 rounded-md border border-border bg-background px-3 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
-              >
-                <option value="all">All Months</option>
-                {(() => {
-                  const months = new Set<string>();
-                  ledgerEntries.forEach(entry => {
-                    const month = entry.entry_date?.slice(0, 7);
-                    if (month) months.add(month);
-                  });
-                  return Array.from(months).sort().reverse().map(month => {
-                    const [year, monthNum] = month.split('-').map(Number);
-                    const label = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                    return <option key={month} value={month}>{label}</option>;
-                  });
-                })()}
-              </select>
-            </div>
-          </div>
-          {ledgerEntries.length === 0 ? (
-            <Card className="border-border bg-card shadow-sm">
-              <CardContent className="py-8 text-center text-muted-foreground">
-                No revenue or expense entries yet for your properties.
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {(() => {
-                // Filter entries by selected month
-                const filteredEntries = ledgerFilterMonth === 'all'
-                  ? ledgerEntries
-                  : ledgerEntries.filter(entry => entry.entry_date?.slice(0, 7) === ledgerFilterMonth);
-
-                // Group entries by month
-                const grouped = filteredEntries.reduce((acc: Record<string, any[]>, entry) => {
-                  const month = entry.entry_date?.slice(0, 7) || 'no-date'; // YYYY-MM
-                  if (!acc[month]) acc[month] = [];
-                  acc[month].push(entry);
-                  return acc;
-                }, {});
-
-                return Object.entries(grouped).map(([month, entries]) => {
-                  // Parse YYYY-MM to avoid timezone issues
-                  const [year, monthNum] = month.split('-').map(Number);
-                  const monthLabel = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                  const totalRevenue = entries.filter(e => e.amount_cents > 0).reduce((sum, e) => sum + e.amount_cents, 0);
-                  const totalExpenses = entries.filter(e => e.amount_cents < 0).reduce((sum, e) => sum + Math.abs(e.amount_cents), 0);
-
-                  const isExpanded = expandedMonths.has(month);
-
-                  return (
-                    <div key={month} className="border border-border/50 rounded-lg bg-gradient-to-r from-muted/20 to-muted/10">
-                      {/* Month Header - Clickable */}
-                      <button
-                        onClick={() => toggleMonthExpanded(month)}
-                        className="w-full p-4 flex items-center justify-between hover:bg-muted/20 transition-colors cursor-pointer text-left"
-                      >
-                        <div className="flex items-center gap-2">
-                          <svg
-                            className={`w-4 h-4 text-primary transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                          <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <h4 className="text-sm font-semibold text-foreground">
-                            {monthLabel}
-                          </h4>
-                          <Badge variant="outline" className="text-xs">{entries.length}</Badge>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs">
-                          <span className="text-green-600 font-medium">+${(totalRevenue / 100).toFixed(2)}</span>
-                          <span className="text-red-600 font-medium">-${(totalExpenses / 100).toFixed(2)}</span>
-                        </div>
-                      </button>
-
-                      {/* Entries for this month - Collapsible */}
-                      {isExpanded && (
-                        <div className="px-4 pb-4 space-y-2">
-                        {entries.map((entry) => {
-                          const isRevenue = entry.amount_cents > 0;
-                          return (
-                            <Card key={entry.id} className="group hover:shadow-md transition-all duration-200 border-border/50 bg-card">
-                              <div className="p-3 flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3 flex-1">
-                                  {/* Icon */}
-                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                    isRevenue ? 'bg-green-100' : 'bg-red-100'
-                                  }`}>
-                                    <svg className={`w-4 h-4 ${isRevenue ? 'text-green-600' : 'text-red-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      {isRevenue ? (
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                      ) : (
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                                      )}
-                                    </svg>
-                                  </div>
-
-                                  {/* Details */}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-0.5">
-                                      <p className="text-sm font-medium text-foreground">{entry.description || 'No description'}</p>
-                                      <Badge className={`text-xs ${
-                                        isRevenue ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'
-                                      }`}>
-                                        {isRevenue ? 'Revenue' : 'Expense'}
-                                      </Badge>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                      <span>{entry.properties?.name || 'Unknown'}</span>
-                                      <span>•</span>
-                                      <span>{new Date(entry.entry_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                                    </div>
-                                  </div>
-
-                                  {/* Amount */}
-                                  <div className="text-right">
-                                    <p className={`text-base font-bold ${isRevenue ? 'text-green-600' : 'text-red-600'}`}>
-                                      {isRevenue ? '+' : '-'}${Math.abs(entry.amount_cents / 100).toFixed(2)}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                      )}
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          )}
-          </div>
-        </div>
-
         {/* Bookings */}
         <div className="mb-8 animate-fade-in" style={{ animationDelay: '500ms' }}>
           <button
@@ -1495,6 +1139,364 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
             </div>
           )}
         </div>
+
+        {/* Revenue & Expenses */}
+        <div className="mb-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
+          <button
+            onClick={() => setIsRevenueExpanded(!isRevenueExpanded)}
+            className="w-full flex items-center gap-3 mb-6 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2 cursor-pointer"
+          >
+            <svg
+              className={`w-5 h-5 text-primary transition-transform duration-300 ${isRevenueExpanded ? 'rotate-90' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Revenue & Expenses
+              {ledgerEntries.length > 0 && (
+                <Badge variant="outline" className="ml-2 bg-primary/5 border-primary/30 text-black">
+                  {ledgerEntries.length}
+                </Badge>
+              )}
+            </h2>
+          </button>
+          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isRevenueExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="flex items-center justify-between mb-6">
+            {/* Month Filter */}
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Filter:</span>
+              <select
+                value={ledgerFilterMonth}
+                onChange={(e) => setLedgerFilterMonth(e.target.value)}
+                className="h-9 rounded-md border border-border bg-background px-3 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
+              >
+                <option value="all">All Months</option>
+                {(() => {
+                  const months = new Set<string>();
+                  ledgerEntries.forEach(entry => {
+                    const month = entry.entry_date?.slice(0, 7);
+                    if (month) months.add(month);
+                  });
+                  return Array.from(months).sort().reverse().map(month => {
+                    const [year, monthNum] = month.split('-').map(Number);
+                    const label = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                    return <option key={month} value={month}>{label}</option>;
+                  });
+                })()}
+              </select>
+            </div>
+          </div>
+          {ledgerEntries.length === 0 ? (
+            <Card className="border-border bg-card shadow-sm">
+              <CardContent className="py-8 text-center text-muted-foreground">
+                No revenue or expense entries yet for your properties.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {(() => {
+                // Filter entries by selected month
+                const filteredEntries = ledgerFilterMonth === 'all'
+                  ? ledgerEntries
+                  : ledgerEntries.filter(entry => entry.entry_date?.slice(0, 7) === ledgerFilterMonth);
+
+                // Group entries by month
+                const grouped = filteredEntries.reduce((acc: Record<string, any[]>, entry) => {
+                  const month = entry.entry_date?.slice(0, 7) || 'no-date'; // YYYY-MM
+                  if (!acc[month]) acc[month] = [];
+                  acc[month].push(entry);
+                  return acc;
+                }, {});
+
+                return Object.entries(grouped).map(([month, entries]) => {
+                  // Parse YYYY-MM to avoid timezone issues
+                  const [year, monthNum] = month.split('-').map(Number);
+                  const monthLabel = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                  const totalRevenue = entries.filter(e => e.amount_cents > 0).reduce((sum, e) => sum + e.amount_cents, 0);
+                  const totalExpenses = entries.filter(e => e.amount_cents < 0).reduce((sum, e) => sum + Math.abs(e.amount_cents), 0);
+
+                  const isExpanded = expandedMonths.has(month);
+
+                  return (
+                    <div key={month} className="border border-border/50 rounded-lg bg-gradient-to-r from-muted/20 to-muted/10">
+                      {/* Month Header - Clickable */}
+                      <button
+                        onClick={() => toggleMonthExpanded(month)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-muted/20 transition-colors cursor-pointer text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <svg
+                            className={`w-4 h-4 text-primary transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <h4 className="text-sm font-semibold text-foreground">
+                            {monthLabel}
+                          </h4>
+                          <Badge variant="outline" className="text-xs">{entries.length}</Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs">
+                          <span className="text-green-600 font-medium">+${(totalRevenue / 100).toFixed(2)}</span>
+                          <span className="text-red-600 font-medium">-${(totalExpenses / 100).toFixed(2)}</span>
+                        </div>
+                      </button>
+
+                      {/* Entries for this month - Collapsible */}
+                      {isExpanded && (
+                        <div className="px-4 pb-4 space-y-2">
+                        {entries.map((entry) => {
+                          const isRevenue = entry.amount_cents > 0;
+                          return (
+                            <Card key={entry.id} className="group hover:shadow-md transition-all duration-200 border-border/50 bg-card">
+                              <div className="p-3 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 flex-1">
+                                  {/* Icon */}
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                    isRevenue ? 'bg-green-100' : 'bg-red-100'
+                                  }`}>
+                                    <svg className={`w-4 h-4 ${isRevenue ? 'text-green-600' : 'text-red-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      {isRevenue ? (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      ) : (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                      )}
+                                    </svg>
+                                  </div>
+
+                                  {/* Details */}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                      <p className="text-sm font-medium text-foreground">{entry.description || 'No description'}</p>
+                                      <Badge className={`text-xs ${
+                                        isRevenue ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'
+                                      }`}>
+                                        {isRevenue ? 'Revenue' : 'Expense'}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <span>{entry.properties?.name || 'Unknown'}</span>
+                                      <span>•</span>
+                                      <span>{new Date(entry.entry_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Amount */}
+                                  <div className="text-right">
+                                    <p className={`text-base font-bold ${isRevenue ? 'text-green-600' : 'text-red-600'}`}>
+                                      {isRevenue ? '+' : '-'}${Math.abs(entry.amount_cents / 100).toFixed(2)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          )}
+          </div>
+        </div>
+
+        {/* Invoices */}
+        <div className="mb-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
+          <button
+            onClick={() => setIsInvoicesExpanded(!isInvoicesExpanded)}
+            className="w-full flex items-center gap-3 mb-6 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2 cursor-pointer"
+          >
+            <svg
+              className={`w-5 h-5 text-primary transition-transform duration-300 ${isInvoicesExpanded ? 'rotate-90' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Invoices
+              {invoices.length > 0 && (
+                <Badge variant="outline" className="ml-2 bg-primary/5 border-primary/30 text-black">
+                  {invoices.length}
+                </Badge>
+              )}
+            </h2>
+          </button>
+          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isInvoicesExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="flex items-center justify-between mb-6">
+            {/* Month Filter */}
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Filter:</span>
+              <select
+                value={invoiceFilterMonth}
+                onChange={(e) => setInvoiceFilterMonth(e.target.value)}
+                className="h-9 rounded-md border border-border bg-background px-3 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
+              >
+                <option value="all">All Months</option>
+                {(() => {
+                  const months = new Set<string>();
+                  invoices.forEach(invoice => {
+                    const month = invoice.bill_month?.slice(0, 7);
+                    if (month) months.add(month);
+                  });
+                  return Array.from(months).sort().reverse().map(month => {
+                    const [year, monthNum] = month.split('-').map(Number);
+                    const label = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                    return <option key={month} value={month}>{label}</option>;
+                  });
+                })()}
+              </select>
+            </div>
+          </div>
+          {invoices.length === 0 ? (
+            <Card className="border-border bg-card shadow-sm">
+              <CardContent className="py-8 text-center text-muted-foreground">
+                No invoices yet.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {(() => {
+                // Filter invoices by selected month
+                const filteredInvoices = invoiceFilterMonth === 'all'
+                  ? invoices
+                  : invoices.filter(invoice => invoice.bill_month?.slice(0, 7) === invoiceFilterMonth);
+
+                // Group invoices by month
+                const grouped = filteredInvoices.reduce((acc: Record<string, any[]>, invoice) => {
+                  const month = invoice.bill_month?.slice(0, 7) || 'no-date'; // YYYY-MM
+                  if (!acc[month]) acc[month] = [];
+                  acc[month].push(invoice);
+                  return acc;
+                }, {});
+
+                return Object.entries(grouped).map(([month, monthInvoices]) => {
+                  // Parse YYYY-MM to avoid timezone issues
+                  const [year, monthNum] = month.split('-').map(Number);
+                  const monthLabel = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                  const paidCount = monthInvoices.filter(i => i.status === 'paid').length;
+                  const totalDue = monthInvoices.reduce((sum, i) => sum + (i.amount_due_cents || 0), 0);
+
+                  const isExpanded = expandedInvoiceMonths.has(month);
+
+                  return (
+                    <div key={month} className="border border-border/50 rounded-lg bg-gradient-to-r from-muted/20 to-muted/10">
+                      {/* Month Header - Clickable */}
+                      <button
+                        onClick={() => toggleInvoiceMonthExpanded(month)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-muted/20 transition-colors cursor-pointer text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <svg
+                            className={`w-4 h-4 text-primary transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <h4 className="text-sm font-semibold text-foreground">
+                            {monthLabel}
+                          </h4>
+                          <Badge variant="outline" className="text-xs">{monthInvoices.length}</Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs">
+                          <span className="text-muted-foreground">{paidCount} paid / {monthInvoices.length} total</span>
+                          <span className="font-medium">${(totalDue / 100).toFixed(2)}</span>
+                        </div>
+                      </button>
+
+                      {/* Invoices for this month - Collapsible */}
+                      {isExpanded && (
+                        <div className="px-4 pb-4 space-y-2">
+                          {monthInvoices.map((inv) => (
+                            <Card key={inv.id} className="group hover:shadow-md transition-all duration-200 border-border/50 bg-card">
+                              <div className="p-3">
+                                {/* Header Row */}
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <p className="text-sm font-medium text-foreground">
+                                      Invoice #{inv.invoice_number ?? inv.id.slice(0, 8)}
+                                    </p>
+                                  </div>
+                                  <Badge
+                                    variant={
+                                      inv.status === 'paid'
+                                        ? 'default'
+                                        : inv.status === 'void'
+                                        ? 'destructive'
+                                        : 'secondary'
+                                    }
+                                    className={
+                                      inv.status === 'paid'
+                                        ? 'bg-green-100 text-green-800 border-green-300'
+                                        : inv.status === 'void'
+                                        ? ''
+                                        : 'bg-red-100 text-red-800 border-red-300'
+                                    }
+                                  >
+                                    {inv.status === 'paid' ? 'PAID' : inv.status === 'void' ? 'VOID' : 'DUE'}
+                                  </Badge>
+                                </div>
+
+                                {/* Details Row */}
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span>{inv.bill_month}</span>
+                                  </div>
+                                  <p className="text-base font-bold text-foreground">
+                                    {formatMoney(inv.amount_due_cents)}
+                                  </p>
+                                </div>
+
+                                {/* Actions Row */}
+                                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
+                                  <Button variant="link" size="sm" asChild className="h-auto p-0 text-primary hover:text-primary/80 cursor-pointer text-xs">
+                                    <a href={`/api/invoices/${inv.id}/pdf`} className="cursor-pointer">View PDF</a>
+                                  </Button>
+                                  <span className="text-muted-foreground">•</span>
+                                  <Button variant="link" size="sm" asChild className="h-auto p-0 text-primary hover:text-primary/80 cursor-pointer text-xs">
+                                    <a href={`/api/invoices/${inv.id}/pdf-link`} className="cursor-pointer">Get Link</a>
+                                  </Button>
+                                </div>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          )}
+          </div>
+        </div>
+
 
         <Card className="border-dashed bg-muted/20 animate-fade-in" style={{ animationDelay: '600ms', borderColor: '#E1ECDB' }}>
           <CardContent className="py-6 text-center">

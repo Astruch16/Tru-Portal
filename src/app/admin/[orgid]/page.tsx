@@ -852,6 +852,38 @@ export default function AdminPage() {
     }
   }
 
+  async function deleteReview(reviewId: string) {
+    if (!confirm('Are you sure you want to delete this review?')) return;
+
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
+        setMsg('Not authenticated');
+        return;
+      }
+
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const res = await fetch(`/api/orgs/${orgId}/reviews?id=${reviewId}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      const j = await res.json();
+      if (j.ok) {
+        setMsg('✓ Review deleted');
+        fetchReviews(); // Refresh reviews list
+      } else {
+        setMsg(`Error: ${j.error || 'Failed to delete review'}`);
+      }
+    } catch (e) {
+      setMsg(`Network error: ${(e as Error).message}`);
+    }
+  }
+
   // --- User modal ---
   const [updatingPlan, setUpdatingPlan] = useState(false);
   const [selectedPlanTier, setSelectedPlanTier] = useState<Tier | ''>('');
@@ -3613,6 +3645,16 @@ export default function AdminPage() {
                                   <p className="text-sm text-muted-foreground mt-2">{review.review_text}</p>
                                 )}
                               </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteReview(review.id)}
+                                className="ml-4 h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </Button>
                             </div>
                           </div>
                         </Card>
