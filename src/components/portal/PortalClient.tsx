@@ -1056,7 +1056,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                               <CardContent className="pt-6">
                                 <div className="flex items-center justify-between mb-2">
                                   <span className="text-sm font-medium text-muted-foreground">Airbnb Avg</span>
-                                  <Badge variant="outline" className="border-pink-500 text-pink-700">Airbnb</Badge>
+                                  <img src="/airbnb-logo.png" alt="Airbnb" className="h-5 w-auto" />
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <div className="text-4xl font-bold text-primary">{avgAirbnb}</div>
@@ -1072,7 +1072,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                               <CardContent className="pt-6">
                                 <div className="flex items-center justify-between mb-2">
                                   <span className="text-sm font-medium text-muted-foreground">VRBO Avg</span>
-                                  <Badge variant="outline" className="border-blue-500 text-blue-700">VRBO</Badge>
+                                  <img src="/vrbo-logo.png" alt="VRBO" className="h-6 w-auto" />
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <div className="text-4xl font-bold text-primary">{avgVrbo}</div>
@@ -1094,12 +1094,11 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                                     <Badge variant="secondary" className="capitalize">
                                       {review.properties?.name || 'Unknown Property'}
                                     </Badge>
-                                    <Badge
-                                      variant="outline"
-                                      className={review.platform === 'airbnb' ? 'border-pink-500 text-pink-700' : 'border-blue-500 text-blue-700'}
-                                    >
-                                      {review.platform === 'airbnb' ? 'Airbnb' : 'VRBO'}
-                                    </Badge>
+                                    <img
+                                      src={review.platform === 'airbnb' ? '/airbnb-logo.png' : '/vrbo-logo.png'}
+                                      alt={review.platform === 'airbnb' ? 'Airbnb' : 'VRBO'}
+                                      className={review.platform === 'airbnb' ? 'h-5 w-auto' : 'h-6 w-auto'}
+                                    />
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <svg className="w-5 h-5 text-yellow-500 fill-current" viewBox="0 0 24 24">
