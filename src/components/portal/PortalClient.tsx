@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { formatMoney, formatNumber, formatPercent } from '@/lib/utils';
+import { Listbox, Transition } from '@headlessui/react';
 
 type KPI = {
   org_id: string;
@@ -624,19 +625,57 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
             {properties.length > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Property:</span>
-                <select
-                  value={selectedPropertyId || 'all'}
-                  onChange={(e) => handlePropertyChange(e.target.value)}
-                  className="h-8 rounded-md border border-border bg-background px-3 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer font-medium"
-                  disabled={loadingPropertyKpi}
-                >
-                  <option value="all">All Properties</option>
-                  {properties.map((property) => (
-                    <option key={property.id} value={property.id}>
-                      {property.name}
-                    </option>
-                  ))}
-                </select>
+                <Listbox value={selectedPropertyId || 'all'} onChange={handlePropertyChange} disabled={loadingPropertyKpi}>
+                  <div className="relative">
+                    <Listbox.Button className="relative w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                      <span className="block truncate text-sm font-medium">
+                        {selectedPropertyId
+                          ? properties.find(p => p.id === selectedPropertyId)?.name || 'All Properties'
+                          : 'All Properties'}
+                      </span>
+                      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                        <svg className="h-5 w-5 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 3a.75.75 0 01.55.24l3.25 3.5a.75.75 0 11-1.1 1.02L10 4.852 7.3 7.76a.75.75 0 01-1.1-1.02l3.25-3.5A.75.75 0 0110 3zm-3.76 9.2a.75.75 0 011.06.04l2.7 2.908 2.7-2.908a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0l-3.25-3.5a.75.75 0 01.04-1.06z" clipRule="evenodd" />
+                        </svg>
+                      </span>
+                    </Listbox.Button>
+                    <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
+                      <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                        <Listbox.Option
+                          value="all"
+                          className={({ active }) =>
+                            `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                              active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                            }`
+                          }
+                        >
+                          {({ selected }) => (
+                            <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                              All Properties
+                            </span>
+                          )}
+                        </Listbox.Option>
+                        {properties.map((property) => (
+                          <Listbox.Option
+                            key={property.id}
+                            value={property.id}
+                            className={({ active }) =>
+                              `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                              }`
+                            }
+                          >
+                            {({ selected }) => (
+                              <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                {property.name}
+                              </span>
+                            )}
+                          </Listbox.Option>
+                        ))}
+                      </Listbox.Options>
+                    </Transition>
+                  </div>
+                </Listbox>
                 {loadingPropertyKpi && (
                   <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
                 )}
@@ -646,17 +685,41 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
             {viewMode === 'monthly' && (
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Month:</span>
-                <select
-                  value={month}
-                  onChange={(e) => handleMonthChange(e.target.value)}
-                  className="h-8 rounded-md border border-border bg-background px-3 text-sm font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
-                >
-                  {monthOptions.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
+                <Listbox value={month} onChange={handleMonthChange}>
+                  <div className="relative">
+                    <Listbox.Button className="relative w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                      <span className="block truncate text-sm font-semibold">
+                        {monthOptions.find(m => m.value === month)?.label || month}
+                      </span>
+                      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                        <svg className="h-5 w-5 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 3a.75.75 0 01.55.24l3.25 3.5a.75.75 0 11-1.1 1.02L10 4.852 7.3 7.76a.75.75 0 01-1.1-1.02l3.25-3.5A.75.75 0 0110 3zm-3.76 9.2a.75.75 0 011.06.04l2.7 2.908 2.7-2.908a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0l-3.25-3.5a.75.75 0 01.04-1.06z" clipRule="evenodd" />
+                        </svg>
+                      </span>
+                    </Listbox.Button>
+                    <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
+                      <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                        {monthOptions.map((m) => (
+                          <Listbox.Option
+                            key={m.value}
+                            value={m.value}
+                            className={({ active }) =>
+                              `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                              }`
+                            }
+                          >
+                            {({ selected }) => (
+                              <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                {m.label}
+                              </span>
+                            )}
+                          </Listbox.Option>
+                        ))}
+                      </Listbox.Options>
+                    </Transition>
+                  </div>
+                </Listbox>
               </div>
             )}
             {viewMode === 'annual' && loadingAnnual && (
@@ -824,16 +887,83 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
             {/* Status Filter */}
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Filter:</span>
-              <select
-                value={bookingFilterStatus}
-                onChange={(e) => setBookingFilterStatus(e.target.value)}
-                className="h-9 rounded-md border border-border bg-background px-3 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
-              >
-                <option value="all">All Bookings</option>
-                <option value="upcoming">Upcoming</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
+              <Listbox value={bookingFilterStatus} onChange={setBookingFilterStatus}>
+                <div className="relative">
+                  <Listbox.Button className="relative w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                    <span className="block truncate text-sm">
+                      {bookingFilterStatus === 'all' && 'All Bookings'}
+                      {bookingFilterStatus === 'upcoming' && 'Upcoming'}
+                      {bookingFilterStatus === 'completed' && 'Completed'}
+                      {bookingFilterStatus === 'cancelled' && 'Cancelled'}
+                    </span>
+                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                      <svg className="h-5 w-5 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 3a.75.75 0 01.55.24l3.25 3.5a.75.75 0 11-1.1 1.02L10 4.852 7.3 7.76a.75.75 0 01-1.1-1.02l3.25-3.5A.75.75 0 0110 3zm-3.76 9.2a.75.75 0 011.06.04l2.7 2.908 2.7-2.908a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0l-3.25-3.5a.75.75 0 01.04-1.06z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                  </Listbox.Button>
+                  <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
+                    <Listbox.Options className="absolute left-0 mt-1 max-h-60 w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                      <Listbox.Option
+                        value="all"
+                        className={({ active }) =>
+                          `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                            active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                          }`
+                        }
+                      >
+                        {({ selected }) => (
+                          <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                            All Bookings
+                          </span>
+                        )}
+                      </Listbox.Option>
+                      <Listbox.Option
+                        value="upcoming"
+                        className={({ active }) =>
+                          `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                            active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                          }`
+                        }
+                      >
+                        {({ selected }) => (
+                          <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                            Upcoming
+                          </span>
+                        )}
+                      </Listbox.Option>
+                      <Listbox.Option
+                        value="completed"
+                        className={({ active }) =>
+                          `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                            active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                          }`
+                        }
+                      >
+                        {({ selected }) => (
+                          <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                            Completed
+                          </span>
+                        )}
+                      </Listbox.Option>
+                      <Listbox.Option
+                        value="cancelled"
+                        className={({ active }) =>
+                          `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                            active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                          }`
+                        }
+                      >
+                        {({ selected }) => (
+                          <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                            Cancelled
+                          </span>
+                        )}
+                      </Listbox.Option>
+                    </Listbox.Options>
+                  </Transition>
+                </div>
+              </Listbox>
             </div>
           </div>
           {bookings.length === 0 ? (
@@ -1165,32 +1295,79 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
               )}
             </h2>
           </button>
-          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isRevenueExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+
+          {/* Month Filter - Outside collapsible to prevent clipping */}
           <div className="flex items-center justify-between mb-6">
-            {/* Month Filter */}
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Filter:</span>
-              <select
-                value={ledgerFilterMonth}
-                onChange={(e) => setLedgerFilterMonth(e.target.value)}
-                className="h-9 rounded-md border border-border bg-background px-3 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
-              >
-                <option value="all">All Months</option>
-                {(() => {
-                  const months = new Set<string>();
-                  ledgerEntries.forEach(entry => {
-                    const month = entry.entry_date?.slice(0, 7);
-                    if (month) months.add(month);
-                  });
-                  return Array.from(months).sort().reverse().map(month => {
-                    const [year, monthNum] = month.split('-').map(Number);
-                    const label = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                    return <option key={month} value={month}>{label}</option>;
-                  });
-                })()}
-              </select>
+              <Listbox value={ledgerFilterMonth} onChange={setLedgerFilterMonth}>
+                <div className="relative">
+                  <Listbox.Button className="relative w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                    <span className="block truncate text-sm">
+                      {ledgerFilterMonth === 'all' ? 'All Months' : (() => {
+                        const [year, monthNum] = ledgerFilterMonth.split('-').map(Number);
+                        return new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                      })()}
+                    </span>
+                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                      <svg className="h-5 w-5 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 3a.75.75 0 01.55.24l3.25 3.5a.75.75 0 11-1.1 1.02L10 4.852 7.3 7.76a.75.75 0 01-1.1-1.02l3.25-3.5A.75.75 0 0110 3zm-3.76 9.2a.75.75 0 011.06.04l2.7 2.908 2.7-2.908a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0l-3.25-3.5a.75.75 0 01.04-1.06z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                  </Listbox.Button>
+                  <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
+                    <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                      <Listbox.Option
+                        value="all"
+                        className={({ active }) =>
+                          `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                            active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                          }`
+                        }
+                      >
+                        {({ selected }) => (
+                          <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                            All Months
+                          </span>
+                        )}
+                      </Listbox.Option>
+                      {(() => {
+                        const months = new Set<string>();
+                        ledgerEntries.forEach(entry => {
+                          const month = entry.entry_date?.slice(0, 7);
+                          if (month) months.add(month);
+                        });
+                        return Array.from(months).sort().reverse().map(month => {
+                          const [year, monthNum] = month.split('-').map(Number);
+                          const label = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                          return (
+                            <Listbox.Option
+                              key={month}
+                              value={month}
+                              className={({ active }) =>
+                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                }`
+                              }
+                            >
+                              {({ selected }) => (
+                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                  {label}
+                                </span>
+                              )}
+                            </Listbox.Option>
+                          );
+                        });
+                      })()}
+                    </Listbox.Options>
+                  </Transition>
+                </div>
+              </Listbox>
             </div>
           </div>
+
+          {/* Collapsible content */}
+          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isRevenueExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
           {ledgerEntries.length === 0 ? (
             <Card className="border-border bg-card shadow-sm">
               <CardContent className="py-8 text-center text-muted-foreground">
@@ -1339,32 +1516,79 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
               )}
             </h2>
           </button>
-          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isInvoicesExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+
+          {/* Month Filter - Outside collapsible to prevent clipping */}
           <div className="flex items-center justify-between mb-6">
-            {/* Month Filter */}
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Filter:</span>
-              <select
-                value={invoiceFilterMonth}
-                onChange={(e) => setInvoiceFilterMonth(e.target.value)}
-                className="h-9 rounded-md border border-border bg-background px-3 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 hover:border-primary/50 cursor-pointer"
-              >
-                <option value="all">All Months</option>
-                {(() => {
-                  const months = new Set<string>();
-                  invoices.forEach(invoice => {
-                    const month = invoice.bill_month?.slice(0, 7);
-                    if (month) months.add(month);
-                  });
-                  return Array.from(months).sort().reverse().map(month => {
-                    const [year, monthNum] = month.split('-').map(Number);
-                    const label = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                    return <option key={month} value={month}>{label}</option>;
-                  });
-                })()}
-              </select>
+              <Listbox value={invoiceFilterMonth} onChange={setInvoiceFilterMonth}>
+                <div className="relative">
+                  <Listbox.Button className="relative w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                    <span className="block truncate text-sm">
+                      {invoiceFilterMonth === 'all' ? 'All Months' : (() => {
+                        const [year, monthNum] = invoiceFilterMonth.split('-').map(Number);
+                        return new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                      })()}
+                    </span>
+                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                      <svg className="h-5 w-5 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 3a.75.75 0 01.55.24l3.25 3.5a.75.75 0 11-1.1 1.02L10 4.852 7.3 7.76a.75.75 0 01-1.1-1.02l3.25-3.5A.75.75 0 0110 3zm-3.76 9.2a.75.75 0 011.06.04l2.7 2.908 2.7-2.908a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0l-3.25-3.5a.75.75 0 01.04-1.06z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                  </Listbox.Button>
+                  <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
+                    <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                      <Listbox.Option
+                        value="all"
+                        className={({ active }) =>
+                          `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                            active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                          }`
+                        }
+                      >
+                        {({ selected }) => (
+                          <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                            All Months
+                          </span>
+                        )}
+                      </Listbox.Option>
+                      {(() => {
+                        const months = new Set<string>();
+                        invoices.forEach(invoice => {
+                          const month = invoice.bill_month?.slice(0, 7);
+                          if (month) months.add(month);
+                        });
+                        return Array.from(months).sort().reverse().map(month => {
+                          const [year, monthNum] = month.split('-').map(Number);
+                          const label = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                          return (
+                            <Listbox.Option
+                              key={month}
+                              value={month}
+                              className={({ active }) =>
+                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                }`
+                              }
+                            >
+                              {({ selected }) => (
+                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                  {label}
+                                </span>
+                              )}
+                            </Listbox.Option>
+                          );
+                        });
+                      })()}
+                    </Listbox.Options>
+                  </Transition>
+                </div>
+              </Listbox>
             </div>
           </div>
+
+          {/* Collapsible content */}
+          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isInvoicesExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
           {invoices.length === 0 ? (
             <Card className="border-border bg-card shadow-sm">
               <CardContent className="py-8 text-center text-muted-foreground">
