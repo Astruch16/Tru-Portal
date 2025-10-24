@@ -57,6 +57,10 @@ const METRIC_CONFIG: Record<
     color: string;
     gradientStart: string;
     gradientEnd: string;
+    headerGradient: string;
+    accentColor: string;
+    chartColor: string;
+    chartColorDark: string;
     iconPath: string;
     format: (value: number) => string;
     dataKey: keyof KPI;
@@ -67,51 +71,75 @@ const METRIC_CONFIG: Record<
     color: '#10b981',
     gradientStart: '#10b981',
     gradientEnd: '#059669',
+    headerGradient: 'linear-gradient(to right, #10b981, #059669)',
+    accentColor: '#10b981',
+    chartColor: '#10b981',
+    chartColorDark: '#059669',
     iconPath: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
     format: (val) => formatMoney(val),
     dataKey: 'gross_revenue_cents',
   },
   net_revenue: {
     label: 'Net Revenue',
-    color: '#E1ECDB',
-    gradientStart: '#E1ECDB',
-    gradientEnd: '#c5d4bf',
+    color: '#10b981',
+    gradientStart: '#10b981',
+    gradientEnd: '#14b8a6',
+    headerGradient: 'linear-gradient(to right, #10b981, #14b8a6)',
+    accentColor: '#10b981',
+    chartColor: '#10b981',
+    chartColorDark: '#14b8a6',
     iconPath: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',
     format: (val) => formatMoney(val),
     dataKey: 'net_revenue_cents',
   },
   expenses: {
     label: 'Expenses',
-    color: '#ef4444',
-    gradientStart: '#ef4444',
+    color: '#f97316',
+    gradientStart: '#f97316',
     gradientEnd: '#dc2626',
+    headerGradient: 'linear-gradient(to right, #f97316, #dc2626)',
+    accentColor: '#f97316',
+    chartColor: '#f97316',
+    chartColorDark: '#dc2626',
     iconPath: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
     format: (val) => formatMoney(val),
     dataKey: 'expenses_cents',
   },
   occupancy_rate: {
     label: 'Occupancy Rate',
-    color: '#E1ECDB',
-    gradientStart: '#E1ECDB',
-    gradientEnd: '#c5d4bf',
+    color: '#0ea5e9',
+    gradientStart: '#0ea5e9',
+    gradientEnd: '#2563eb',
+    headerGradient: 'linear-gradient(to right, #0ea5e9, #2563eb)',
+    accentColor: '#0ea5e9',
+    chartColor: '#0ea5e9',
+    chartColorDark: '#2563eb',
     iconPath: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
     format: (val) => formatPercent(val),
     dataKey: 'occupancy_rate',
   },
   vacancy_rate: {
     label: 'Vacancy Rate',
-    color: '#f59e0b',
-    gradientStart: '#f59e0b',
-    gradientEnd: '#d97706',
+    color: '#64748b',
+    gradientStart: '#64748b',
+    gradientEnd: '#6b7280',
+    headerGradient: 'linear-gradient(to right, #64748b, #6b7280)',
+    accentColor: '#64748b',
+    chartColor: '#64748b',
+    chartColorDark: '#6b7280',
     iconPath: 'M13 17h8m0 0V9m0 8l-8-8-4 4-6-6',
     format: (val) => formatPercent(val),
     dataKey: 'vacancy_rate',
   },
   nights_booked: {
     label: 'Nights Booked',
-    color: '#E1ECDB',
-    gradientStart: '#E1ECDB',
-    gradientEnd: '#c5d4bf',
+    color: '#3b82f6',
+    gradientStart: '#3b82f6',
+    gradientEnd: '#06b6d4',
+    headerGradient: 'linear-gradient(to right, #3b82f6, #06b6d4)',
+    accentColor: '#3b82f6',
+    chartColor: '#3b82f6',
+    chartColorDark: '#06b6d4',
     iconPath: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
     format: (val) => formatNumber(val),
     dataKey: 'nights_booked',
@@ -425,7 +453,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
         }}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-[#a8c5a0] to-[#8fb389] text-white px-6 py-5 rounded-t-2xl border-b border-[#E1ECDB]/20" style={{ background: 'linear-gradient(to right, #9db896, #88a882)' }}>
+        <div className="sticky top-0 text-white px-6 py-5 rounded-t-2xl border-b border-white/20" style={{ background: config.headerGradient }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-lg bg-white/20 flex items-center justify-center">
@@ -443,7 +471,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
             <Button
               onClick={onClose}
               variant="ghost"
-              className="text-white hover:bg-white/20 transition-colors"
+              className="text-white hover:bg-white/20 transition-colors cursor-pointer"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -484,7 +512,8 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   <Button
                     onClick={() => setViewMode('monthly')}
                     variant={viewMode === 'monthly' ? 'default' : 'outline'}
-                    className={`transition-all ${viewMode === 'monthly' ? 'bg-[#9db896] hover:bg-[#88a882] text-white' : 'border-[#E1ECDB] hover:bg-[#E1ECDB]/30'}`}
+                    className={`transition-all cursor-pointer ${viewMode === 'monthly' ? 'text-white' : 'hover:bg-gray-100'}`}
+                    style={viewMode === 'monthly' ? { background: config.accentColor } : {}}
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -494,7 +523,8 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   <Button
                     onClick={() => setViewMode('annual')}
                     variant={viewMode === 'annual' ? 'default' : 'outline'}
-                    className={`transition-all ${viewMode === 'annual' ? 'bg-[#9db896] hover:bg-[#88a882] text-white' : 'border-[#E1ECDB] hover:bg-[#E1ECDB]/30'}`}
+                    className={`transition-all cursor-pointer ${viewMode === 'annual' ? 'text-white' : 'hover:bg-gray-100'}`}
+                    style={viewMode === 'annual' ? { background: config.accentColor } : {}}
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -507,7 +537,28 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   <select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg bg-white hover:border-[#9db896] focus:outline-none focus:ring-2 focus:ring-[#9db896] transition-all"
+                    className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 transition-all cursor-pointer"
+                    style={{
+                      borderColor: 'rgb(209 213 219)',
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = config.accentColor;
+                      e.target.style.boxShadow = `0 0 0 3px ${config.accentColor}20`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = 'rgb(209 213 219)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    onMouseEnter={(e) => {
+                      if (document.activeElement !== e.target) {
+                        e.target.style.borderColor = config.accentColor;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (document.activeElement !== e.target) {
+                        e.target.style.borderColor = 'rgb(209 213 219)';
+                      }
+                    }}
                   >
                     {kpis.map((kpi) => {
                       // Parse YYYY-MM-DD without timezone conversion
@@ -524,11 +575,11 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
               </div>
 
               {/* Featured Metric Card */}
-              <Card className="shadow-lg bg-white" style={{ border: '2px solid #9db896' }}>
+              <Card className="shadow-lg bg-white" style={{ border: `2px solid ${config.accentColor}` }}>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#9db896]/20">
-                      <svg className="w-5 h-5 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${config.accentColor}20` }}>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: config.accentColor }}>
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={config.iconPath} />
                       </svg>
                     </div>
@@ -544,7 +595,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-5xl font-bold mb-2 text-[#88a882]">
+                  <div className="text-5xl font-bold mb-2" style={{ color: config.chartColorDark }}>
                     {viewMode === 'monthly'
                       ? config.format(selectedValue)
                       : (metricType === 'occupancy_rate' || metricType === 'vacancy_rate')
@@ -563,7 +614,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
               <Card className="shadow-lg bg-white" style={{ border: '1px solid #E1ECDB' }}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: config.accentColor }}>
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                     </svg>
                     {viewMode === 'monthly' ? 'Daily Breakdown' : 'Performance Trend'}
@@ -581,24 +632,59 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   ) : (
                     <ResponsiveContainer width="100%" height={450}>
                       {viewMode === 'monthly' ? (
-                        <LineChart data={dailyChartData} margin={{ top: 10, right: 30, left: 20, bottom: 40 }}>
+                        <LineChart data={dailyChartData} margin={{ top: 20, right: 40, left: 30, bottom: 50 }}>
                           <defs>
                             <linearGradient id={`gradient-monthly-${metricType}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#9db896" stopOpacity={0.3} />
-                              <stop offset="95%" stopColor="#9db896" stopOpacity={0.05} />
+                              <stop offset="5%" stopColor={config.chartColor} stopOpacity={0.4} />
+                              <stop offset="95%" stopColor={config.chartColor} stopOpacity={0.02} />
                             </linearGradient>
+                            <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                              <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                              <feOffset dx="0" dy="2" result="offsetblur"/>
+                              <feComponentTransfer>
+                                <feFuncA type="linear" slope="0.2"/>
+                              </feComponentTransfer>
+                              <feMerge>
+                                <feMergeNode/>
+                                <feMergeNode in="SourceGraphic"/>
+                              </feMerge>
+                            </filter>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                          <CartesianGrid
+                            strokeDasharray="0"
+                            stroke="#E1ECDB"
+                            opacity={0.6}
+                            vertical={false}
+                            strokeWidth={1.5}
+                          />
                           <XAxis
                             dataKey="day"
-                            stroke="#6b7280"
-                            style={{ fontSize: 12, fontWeight: 500 }}
-                            label={{ value: 'Day of Month', position: 'insideBottom', offset: -10 }}
+                            stroke={config.chartColorDark}
+                            strokeWidth={2}
+                            style={{ fontSize: 14, fontWeight: 600, fill: '#374151' }}
+                            tick={{ fill: '#374151', fontWeight: 600 }}
+                            axisLine={{ stroke: config.chartColor, strokeWidth: 2 }}
+                            tickLine={{ stroke: config.chartColor, strokeWidth: 1.5 }}
+                            label={{
+                              value: 'Day of Month',
+                              position: 'insideBottom',
+                              offset: -15,
+                              style: { fontSize: 15, fontWeight: 800, fill: '#1f2937', letterSpacing: '0.5px' }
+                            }}
                           />
                           <YAxis
-                            stroke="#6b7280"
-                            style={{ fontSize: 12, fontWeight: 500 }}
-                            label={{ value: config.dataKey.includes('cents') ? 'Amount ($)' : 'Value', angle: -90, position: 'insideLeft' }}
+                            stroke={config.chartColorDark}
+                            strokeWidth={2}
+                            style={{ fontSize: 14, fontWeight: 600, fill: '#374151' }}
+                            tick={{ fill: '#374151', fontWeight: 600 }}
+                            axisLine={{ stroke: config.chartColor, strokeWidth: 2 }}
+                            tickLine={{ stroke: config.chartColor, strokeWidth: 1.5 }}
+                            label={{
+                              value: config.dataKey.includes('cents') ? 'Amount ($)' : 'Value',
+                              angle: -90,
+                              position: 'insideLeft',
+                              style: { fontSize: 15, fontWeight: 800, fill: '#1f2937', letterSpacing: '0.5px' }
+                            }}
                             tickFormatter={(value) => {
                               if (config.dataKey.includes('cents')) {
                                 const dollars = value / 100;
@@ -613,20 +699,22 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                           />
                           <Tooltip
                             contentStyle={{
-                              background: 'white',
-                              border: '2px solid #E1ECDB',
-                              borderRadius: 12,
-                              padding: 16,
-                              boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                              background: 'linear-gradient(135deg, #ffffff 0%, #f9fafb 100%)',
+                              border: `2px solid ${config.chartColor}`,
+                              borderRadius: 16,
+                              padding: 20,
+                              boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.15), 0 10px 10px -5px rgb(0 0 0 / 0.08)',
                             }}
+                            labelStyle={{ fontSize: 14, fontWeight: 700, color: config.chartColorDark, marginBottom: 8 }}
+                            cursor={{ stroke: config.chartColor, strokeWidth: 2, strokeDasharray: '5 5', opacity: 0.5 }}
                             labelFormatter={(day) => `Day ${day}`}
                             formatter={(value: number, name, props) => {
                               const entries = props.payload.entries || [];
                               return [
                                 <div key="tooltip">
-                                  <div className="font-bold mb-1">{config.format(value)}</div>
+                                  <div className="font-bold mb-1 text-lg" style={{ color: config.chartColorDark }}>{config.format(value)}</div>
                                   {entries.length > 0 && (
-                                    <div className="text-xs text-gray-600">{entries.length} {entries.length === 1 ? 'entry' : 'entries'}</div>
+                                    <div className="text-xs text-gray-600 font-medium">{entries.length} {entries.length === 1 ? 'entry' : 'entries'}</div>
                                   )}
                                 </div>,
                                 config.label
@@ -636,35 +724,84 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                           <Line
                             type="monotone"
                             dataKey="value"
-                            stroke="#9db896"
-                            strokeWidth={3}
+                            stroke={config.chartColor}
+                            strokeWidth={4}
                             fill={`url(#gradient-monthly-${metricType})`}
-                            dot={{ fill: '#9db896', r: 4, strokeWidth: 2, stroke: 'white' }}
-                            activeDot={{ r: 6, strokeWidth: 2, stroke: 'white', fill: '#9db896' }}
+                            dot={{
+                              fill: '#ffffff',
+                              r: 6,
+                              strokeWidth: 3,
+                              stroke: config.chartColor,
+                              filter: 'url(#shadow)'
+                            }}
+                            activeDot={{
+                              r: 8,
+                              strokeWidth: 4,
+                              stroke: config.chartColorDark,
+                              fill: '#ffffff',
+                              filter: 'url(#shadow)'
+                            }}
+                            animationDuration={1500}
+                            animationEasing="ease-in-out"
                           />
                         </LineChart>
                       ) : (
-                        <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 60 }}>
+                        <AreaChart data={chartData} margin={{ top: 20, right: 40, left: 30, bottom: 50 }}>
                           <defs>
                             <linearGradient id={`gradient-annual-${metricType}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#9db896" stopOpacity={0.3} />
-                              <stop offset="95%" stopColor="#9db896" stopOpacity={0.05} />
+                              <stop offset="5%" stopColor={config.chartColor} stopOpacity={0.5} />
+                              <stop offset="95%" stopColor={config.chartColor} stopOpacity={0.02} />
                             </linearGradient>
+                            <filter id="shadow-annual" x="-50%" y="-50%" width="200%" height="200%">
+                              <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                              <feOffset dx="0" dy="2" result="offsetblur"/>
+                              <feComponentTransfer>
+                                <feFuncA type="linear" slope="0.2"/>
+                              </feComponentTransfer>
+                              <feMerge>
+                                <feMergeNode/>
+                                <feMergeNode in="SourceGraphic"/>
+                              </feMerge>
+                            </filter>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                          <CartesianGrid
+                            strokeDasharray="0"
+                            stroke="#E1ECDB"
+                            opacity={0.6}
+                            vertical={false}
+                            strokeWidth={1.5}
+                          />
                           <XAxis
                             dataKey="month"
-                            stroke="#6b7280"
-                            style={{ fontSize: 12, fontWeight: 500 }}
+                            stroke={config.chartColorDark}
+                            strokeWidth={2}
+                            style={{ fontSize: 13, fontWeight: 600, fill: '#374151' }}
+                            tick={{ fill: '#374151', fontWeight: 600 }}
+                            axisLine={{ stroke: config.chartColor, strokeWidth: 2 }}
+                            tickLine={{ stroke: config.chartColor, strokeWidth: 1.5 }}
                             angle={-45}
                             textAnchor="end"
                             height={80}
-                            label={{ value: 'Month', position: 'insideBottom', offset: -50 }}
+                            label={{
+                              value: 'Month',
+                              position: 'insideBottom',
+                              offset: -25,
+                              style: { fontSize: 15, fontWeight: 800, fill: '#1f2937', letterSpacing: '0.5px' }
+                            }}
                           />
                           <YAxis
-                            stroke="#6b7280"
-                            style={{ fontSize: 12, fontWeight: 500 }}
-                            label={{ value: config.dataKey.includes('cents') ? 'Amount ($)' : 'Value', angle: -90, position: 'insideLeft' }}
+                            stroke={config.chartColorDark}
+                            strokeWidth={2}
+                            style={{ fontSize: 14, fontWeight: 600, fill: '#374151' }}
+                            tick={{ fill: '#374151', fontWeight: 600 }}
+                            axisLine={{ stroke: config.chartColor, strokeWidth: 2 }}
+                            tickLine={{ stroke: config.chartColor, strokeWidth: 1.5 }}
+                            label={{
+                              value: config.dataKey.includes('cents') ? 'Amount ($)' : 'Value',
+                              angle: -90,
+                              position: 'insideLeft',
+                              style: { fontSize: 15, fontWeight: 800, fill: '#1f2937', letterSpacing: '0.5px' }
+                            }}
                             tickFormatter={(value) => {
                               if (config.dataKey.includes('cents')) {
                                 const dollars = value / 100;
@@ -679,23 +816,43 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                           />
                           <Tooltip
                             contentStyle={{
-                              background: 'white',
-                              border: '2px solid #E1ECDB',
-                              borderRadius: 12,
-                              padding: 16,
-                              boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                              background: 'linear-gradient(135deg, #ffffff 0%, #f9fafb 100%)',
+                              border: `2px solid ${config.chartColor}`,
+                              borderRadius: 16,
+                              padding: 20,
+                              boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.15), 0 10px 10px -5px rgb(0 0 0 / 0.08)',
                             }}
-                            labelStyle={{ fontWeight: 600, marginBottom: 8 }}
-                            formatter={(value: number) => [config.format(value), config.label]}
+                            labelStyle={{ fontSize: 14, fontWeight: 700, color: config.chartColorDark, marginBottom: 8 }}
+                            cursor={{ stroke: config.chartColor, strokeWidth: 2, strokeDasharray: '5 5', opacity: 0.5 }}
+                            formatter={(value: number) => [
+                              <div key="tooltip" className="font-bold text-lg" style={{ color: config.chartColorDark }}>
+                                {config.format(value)}
+                              </div>,
+                              config.label
+                            ]}
                           />
                           <Area
                             type="monotone"
                             dataKey="value"
-                            stroke="#9db896"
-                            strokeWidth={3}
+                            stroke={config.chartColor}
+                            strokeWidth={4}
                             fill={`url(#gradient-annual-${metricType})`}
-                            dot={{ fill: '#9db896', r: 5, strokeWidth: 2, stroke: 'white' }}
-                            activeDot={{ r: 7, strokeWidth: 2, stroke: 'white', fill: '#9db896' }}
+                            dot={{
+                              fill: '#ffffff',
+                              r: 6,
+                              strokeWidth: 3,
+                              stroke: config.chartColor,
+                              filter: 'url(#shadow-annual)'
+                            }}
+                            activeDot={{
+                              r: 8,
+                              strokeWidth: 4,
+                              stroke: config.chartColorDark,
+                              fill: '#ffffff',
+                              filter: 'url(#shadow-annual)'
+                            }}
+                            animationDuration={1500}
+                            animationEasing="ease-in-out"
                           />
                         </AreaChart>
                       )}
@@ -710,13 +867,13 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   {/* Header - Always Visible */}
                   <button
                     onClick={() => setIsEntriesExpanded(!isEntriesExpanded)}
-                    className="w-full text-left"
+                    className="w-full text-left cursor-pointer"
                   >
                     <CardHeader className="hover:bg-[#E1ECDB]/10 transition-colors cursor-pointer">
                       <div className="flex items-center justify-between">
                         <div>
                           <CardTitle className="flex items-center gap-2">
-                            <svg className="w-5 h-5 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: config.accentColor }}>
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                             </svg>
                             All Entries This Month
@@ -729,7 +886,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                           <span className="text-xs font-medium text-gray-600">
                             {isEntriesExpanded ? 'Hide' : 'Show'}
                           </span>
-                          <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isEntriesExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className={`w-5 h-5 transition-transform duration-300 ${isEntriesExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: config.accentColor }}>
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
                         </div>
@@ -755,7 +912,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                               size="sm"
                               variant="ghost"
                               onClick={() => setEntryTypeFilter('all')}
-                              className={`h-7 px-3 text-xs font-medium transition-all ${
+                              className={`h-7 px-3 text-xs font-medium transition-all cursor-pointer ${
                                 entryTypeFilter === 'all'
                                   ? 'bg-[#9db896] text-white shadow-sm hover:bg-[#9db896]/90'
                                   : 'text-foreground hover:bg-muted/50'
@@ -767,7 +924,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                               size="sm"
                               variant="ghost"
                               onClick={() => setEntryTypeFilter('revenue')}
-                              className={`h-7 px-3 text-xs font-medium transition-all ${
+                              className={`h-7 px-3 text-xs font-medium transition-all cursor-pointer ${
                                 entryTypeFilter === 'revenue'
                                   ? 'bg-green-600 text-white shadow-sm hover:bg-green-600/90'
                                   : 'text-foreground hover:bg-muted/50'
@@ -779,7 +936,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                               size="sm"
                               variant="ghost"
                               onClick={() => setEntryTypeFilter('expenses')}
-                              className={`h-7 px-3 text-xs font-medium transition-all ${
+                              className={`h-7 px-3 text-xs font-medium transition-all cursor-pointer ${
                                 entryTypeFilter === 'expenses'
                                   ? 'bg-red-600 text-white shadow-sm hover:bg-red-600/90'
                                   : 'text-foreground hover:bg-muted/50'
@@ -893,36 +1050,36 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                 <Card className="bg-white shadow-md hover:shadow-lg transition-shadow" style={{ border: '1px solid #E1ECDB' }}>
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#E1ECDB]/30 flex items-center justify-center">
-                        <svg className="w-4 h-4 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${config.accentColor}20` }}>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: config.accentColor }}>
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
                       <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Latest</div>
                     </div>
-                    <div className="text-2xl font-bold text-[#88a882]">
+                    <div className="text-2xl font-bold" style={{ color: config.chartColorDark }}>
                       {config.format(chartData[chartData.length - 1]?.value || 0)}
                     </div>
-                    <Badge variant="secondary" className="mt-2 bg-[#E1ECDB]/30 text-[#88a882] border-[#E1ECDB]">Most Recent</Badge>
+                    <Badge variant="secondary" className="mt-2 border" style={{ backgroundColor: `${config.accentColor}20`, color: config.chartColorDark, borderColor: `${config.accentColor}40` }}>Most Recent</Badge>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-white shadow-md hover:shadow-lg transition-shadow" style={{ border: '1px solid #E1ECDB' }}>
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#E1ECDB]/30 flex items-center justify-center">
-                        <svg className="w-4 h-4 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${config.accentColor}20` }}>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: config.accentColor }}>
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
                       </div>
                       <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Average</div>
                     </div>
-                    <div className="text-2xl font-bold text-[#88a882]">
+                    <div className="text-2xl font-bold" style={{ color: config.chartColorDark }}>
                       {config.format(
                         chartData.reduce((sum, d) => sum + d.value, 0) / chartData.length || 0
                       )}
                     </div>
-                    <Badge variant="secondary" className="mt-2 bg-[#E1ECDB]/30 text-[#88a882] border-[#E1ECDB]">Mean Value</Badge>
+                    <Badge variant="secondary" className="mt-2 border" style={{ backgroundColor: `${config.accentColor}20`, color: config.chartColorDark, borderColor: `${config.accentColor}40` }}>Mean Value</Badge>
                   </CardContent>
                 </Card>
 
@@ -967,13 +1124,13 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   {/* Header - Always Visible */}
                   <button
                     onClick={() => setIsBreakdownExpanded(!isBreakdownExpanded)}
-                    className="w-full text-left"
+                    className="w-full text-left cursor-pointer"
                   >
                     <CardHeader className="hover:bg-[#E1ECDB]/10 transition-colors cursor-pointer">
                       <div className="flex items-center justify-between">
                         <div>
                           <CardTitle className="flex items-center gap-2">
-                            <svg className="w-5 h-5 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: config.accentColor }}>
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                             </svg>
                             Monthly Breakdown
@@ -987,10 +1144,11 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                               {isBreakdownExpanded ? 'Hide' : 'Show'}
                             </span>
                             <svg
-                              className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isBreakdownExpanded ? 'rotate-180' : ''}`}
+                              className={`w-5 h-5 transition-transform duration-300 ${isBreakdownExpanded ? 'rotate-180' : ''}`}
                               fill="none"
                               viewBox="0 0 24 24"
                               stroke="currentColor"
+                              style={{ color: config.accentColor }}
                             >
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
@@ -1017,11 +1175,12 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                               size="sm"
                               variant="ghost"
                               onClick={() => setSortOrder('chronological')}
-                              className={`h-8 px-3 text-xs transition-all ${
+                              className={`h-8 px-3 text-xs transition-all cursor-pointer ${
                                 sortOrder === 'chronological'
-                                  ? 'bg-[#9db896] text-white hover:bg-[#88a882]'
+                                  ? 'text-white'
                                   : 'text-gray-600 hover:bg-[#E1ECDB]/30'
                               }`}
+                              style={sortOrder === 'chronological' ? { backgroundColor: config.accentColor } : {}}
                             >
                               <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -1032,7 +1191,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                               size="sm"
                               variant="ghost"
                               onClick={() => setSortOrder('peak')}
-                              className={`h-8 px-3 text-xs transition-all ${
+                              className={`h-8 px-3 text-xs transition-all cursor-pointer ${
                                 sortOrder === 'peak'
                                   ? 'bg-green-100 text-green-700 hover:bg-green-200'
                                   : 'text-gray-600 hover:bg-[#E1ECDB]/30'
@@ -1047,7 +1206,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                               size="sm"
                               variant="ghost"
                               onClick={() => setSortOrder('low')}
-                              className={`h-8 px-3 text-xs transition-all ${
+                              className={`h-8 px-3 text-xs transition-all cursor-pointer ${
                                 sortOrder === 'low'
                                   ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
                                   : 'text-gray-600 hover:bg-[#E1ECDB]/30'

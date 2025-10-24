@@ -30,7 +30,24 @@ export async function GET(
   }
 
   try {
-    // Get all reviews for the org with property information
+    // For member portal, ALWAYS filter by property assignments
+    // regardless of admin status (owners/managers use member portal for personal use too)
+    const { data: assignments } = await admin
+      .from('user_properties')
+      .select('property_id')
+      .eq('user_id', user.id);
+
+    console.log('Reviews GET - User:', user.id);
+    console.log('Reviews GET - Property assignments:', assignments);
+
+    if (!assignments || assignments.length === 0) {
+      console.log('Reviews GET - No property assignments, returning empty');
+      return NextResponse.json({ ok: true, reviews: [] });
+    }
+
+    const propertyIds = assignments.map(a => a.property_id);
+    console.log('Reviews GET - Filtering by property IDs:', propertyIds);
+
     const { data: reviews, error } = await admin
       .from('reviews')
       .select(`
@@ -41,11 +58,17 @@ export async function GET(
         )
       `)
       .eq('org_id', orgId)
+      .in('property_id', propertyIds)
       .order('review_date', { ascending: false });
 
     if (error) {
       console.error('Error fetching reviews:', error);
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    console.log('Reviews GET - Returning', reviews?.length, 'reviews');
+    if (reviews && reviews.length > 0) {
+      console.log('Reviews GET - First review property_id:', reviews[0].property_id);
     }
 
     return NextResponse.json({ ok: true, reviews: reviews || [] });

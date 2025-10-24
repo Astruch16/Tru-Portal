@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase/client';
 import { Card } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Listbox, Transition } from '@headlessui/react';
 import Image from 'next/image';
 
 type Tier = 'launch' | 'elevate' | 'maximize';
@@ -133,6 +134,9 @@ export default function AdminPage() {
   const [busyReview, setBusyReview] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
+  const [reviewFilterProperty, setReviewFilterProperty] = useState<string>('all');
+  const [reviewFilterPlatform, setReviewFilterPlatform] = useState<string>('all');
+  const [reviewSortBy, setReviewSortBy] = useState<string>('date-desc');
 
   // --- User modal state ---
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
@@ -3600,65 +3604,303 @@ export default function AdminPage() {
               {/* Reviews List */}
               <Card className="border-border/50">
                 <div className="p-6">
-                  <h3 className="text-lg font-semibold mb-4 text-foreground">
-                    All Reviews ({reviews.length})
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-foreground">
+                      All Reviews ({reviews.length})
+                    </h3>
+                  </div>
+
+                  {/* Filters and Sort */}
+                  <div className="flex items-center gap-4 mb-4 flex-wrap">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Property:</span>
+                      <Listbox value={reviewFilterProperty} onChange={setReviewFilterProperty}>
+                        <div className="relative">
+                          <Listbox.Button className="relative w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                            <span className="block truncate text-sm">
+                              {reviewFilterProperty === 'all' ? 'All Properties' : properties.find(p => p.id === reviewFilterProperty)?.name || 'All Properties'}
+                            </span>
+                            <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                              <svg className="h-5 w-5 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 3a.75.75 0 01.55.24l3.25 3.5a.75.75 0 11-1.1 1.02L10 4.852 7.3 7.76a.75.75 0 01-1.1-1.02l3.25-3.5A.75.75 0 0110 3zm-3.76 9.2a.75.75 0 011.06.04l2.7 2.908 2.7-2.908a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0l-3.25-3.5a.75.75 0 01.04-1.06z" clipRule="evenodd" />
+                              </svg>
+                            </span>
+                          </Listbox.Button>
+                          <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
+                            <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                              <Listbox.Option
+                                value="all"
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                    active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                  }`
+                                }
+                              >
+                                {({ selected }) => (
+                                  <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                    All Properties
+                                  </span>
+                                )}
+                              </Listbox.Option>
+                              {properties.map((prop) => (
+                                <Listbox.Option
+                                  key={prop.id}
+                                  value={prop.id}
+                                  className={({ active }) =>
+                                    `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                      active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                    }`
+                                  }
+                                >
+                                  {({ selected }) => (
+                                    <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                      {prop.name}
+                                    </span>
+                                  )}
+                                </Listbox.Option>
+                              ))}
+                            </Listbox.Options>
+                          </Transition>
+                        </div>
+                      </Listbox>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Platform:</span>
+                      <Listbox value={reviewFilterPlatform} onChange={setReviewFilterPlatform}>
+                        <div className="relative">
+                          <Listbox.Button className="relative w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                            <span className="block truncate text-sm">
+                              {reviewFilterPlatform === 'all' && 'All Platforms'}
+                              {reviewFilterPlatform === 'airbnb' && 'Airbnb'}
+                              {reviewFilterPlatform === 'vrbo' && 'VRBO'}
+                            </span>
+                            <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                              <svg className="h-5 w-5 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 3a.75.75 0 01.55.24l3.25 3.5a.75.75 0 11-1.1 1.02L10 4.852 7.3 7.76a.75.75 0 01-1.1-1.02l3.25-3.5A.75.75 0 0110 3zm-3.76 9.2a.75.75 0 011.06.04l2.7 2.908 2.7-2.908a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0l-3.25-3.5a.75.75 0 01.04-1.06z" clipRule="evenodd" />
+                              </svg>
+                            </span>
+                          </Listbox.Button>
+                          <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
+                            <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                              <Listbox.Option
+                                value="all"
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                    active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                  }`
+                                }
+                              >
+                                {({ selected }) => (
+                                  <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                    All Platforms
+                                  </span>
+                                )}
+                              </Listbox.Option>
+                              <Listbox.Option
+                                value="airbnb"
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                    active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                  }`
+                                }
+                              >
+                                {({ selected }) => (
+                                  <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                    Airbnb
+                                  </span>
+                                )}
+                              </Listbox.Option>
+                              <Listbox.Option
+                                value="vrbo"
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                    active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                  }`
+                                }
+                              >
+                                {({ selected }) => (
+                                  <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                    VRBO
+                                  </span>
+                                )}
+                              </Listbox.Option>
+                            </Listbox.Options>
+                          </Transition>
+                        </div>
+                      </Listbox>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Sort by:</span>
+                      <Listbox value={reviewSortBy} onChange={setReviewSortBy}>
+                        <div className="relative">
+                          <Listbox.Button className="relative w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                            <span className="block truncate text-sm">
+                              {reviewSortBy === 'date-desc' && 'Newest First'}
+                              {reviewSortBy === 'date-asc' && 'Oldest First'}
+                              {reviewSortBy === 'rating-desc' && 'Highest Rating'}
+                              {reviewSortBy === 'rating-asc' && 'Lowest Rating'}
+                            </span>
+                            <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                              <svg className="h-5 w-5 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 3a.75.75 0 01.55.24l3.25 3.5a.75.75 0 11-1.1 1.02L10 4.852 7.3 7.76a.75.75 0 01-1.1-1.02l3.25-3.5A.75.75 0 0110 3zm-3.76 9.2a.75.75 0 011.06.04l2.7 2.908 2.7-2.908a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0l-3.25-3.5a.75.75 0 01.04-1.06z" clipRule="evenodd" />
+                              </svg>
+                            </span>
+                          </Listbox.Button>
+                          <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
+                            <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                              <Listbox.Option
+                                value="date-desc"
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                    active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                  }`
+                                }
+                              >
+                                {({ selected }) => (
+                                  <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                    Newest First
+                                  </span>
+                                )}
+                              </Listbox.Option>
+                              <Listbox.Option
+                                value="date-asc"
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                    active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                  }`
+                                }
+                              >
+                                {({ selected }) => (
+                                  <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                    Oldest First
+                                  </span>
+                                )}
+                              </Listbox.Option>
+                              <Listbox.Option
+                                value="rating-desc"
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                    active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                  }`
+                                }
+                              >
+                                {({ selected }) => (
+                                  <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                    Highest Rating
+                                  </span>
+                                )}
+                              </Listbox.Option>
+                              <Listbox.Option
+                                value="rating-asc"
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                    active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                  }`
+                                }
+                              >
+                                {({ selected }) => (
+                                  <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                    Lowest Rating
+                                  </span>
+                                )}
+                              </Listbox.Option>
+                            </Listbox.Options>
+                          </Transition>
+                        </div>
+                      </Listbox>
+                    </div>
+                  </div>
 
                   {loadingReviews ? (
                     <div className="text-center py-8 text-muted-foreground">Loading reviews...</div>
                   ) : reviews.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">No reviews yet</div>
                   ) : (
-                    <div className="space-y-3">
-                      {reviews.map((review) => (
-                        <Card key={review.id} className="border-border/50 bg-card/50">
-                          <div className="p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <Badge variant="secondary" className="capitalize">
-                                    {review.properties?.name || 'Unknown Property'}
-                                  </Badge>
-                                  <img
-                                    src={review.platform === 'airbnb' ? '/airbnb-logo.png' : '/vrbo-logo.png'}
-                                    alt={review.platform === 'airbnb' ? 'Airbnb' : 'VRBO'}
-                                    className={review.platform === 'airbnb' ? 'h-4 w-auto' : 'h-5 w-auto'}
-                                  />
-                                  <div className="flex items-center gap-1">
-                                    <svg className="w-4 h-4 text-yellow-500 fill-current" viewBox="0 0 24 24">
-                                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                    </svg>
-                                    <span className="font-bold text-foreground">
-                                      {review.rating} / {review.platform === 'airbnb' ? '5' : '10'}
-                                    </span>
+                    (() => {
+                      // Filter reviews
+                      let filteredReviews = reviews;
+
+                      if (reviewFilterProperty !== 'all') {
+                        filteredReviews = filteredReviews.filter(r => r.property_id === reviewFilterProperty);
+                      }
+
+                      if (reviewFilterPlatform !== 'all') {
+                        filteredReviews = filteredReviews.filter(r => r.platform === reviewFilterPlatform);
+                      }
+
+                      // Sort reviews
+                      const sortedReviews = [...filteredReviews].sort((a, b) => {
+                        if (reviewSortBy === 'date-desc') {
+                          return new Date(b.review_date).getTime() - new Date(a.review_date).getTime();
+                        } else if (reviewSortBy === 'date-asc') {
+                          return new Date(a.review_date).getTime() - new Date(b.review_date).getTime();
+                        } else if (reviewSortBy === 'rating-desc') {
+                          return b.rating - a.rating;
+                        } else if (reviewSortBy === 'rating-asc') {
+                          return a.rating - b.rating;
+                        }
+                        return 0;
+                      });
+
+                      if (sortedReviews.length === 0) {
+                        return <div className="text-center py-8 text-muted-foreground">No reviews match the selected filters</div>;
+                      }
+
+                      return (
+                        <div className="space-y-3">
+                          {sortedReviews.map((review) => (
+                            <Card key={review.id} className="border-border/50 bg-card/50">
+                              <div className="p-4">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <Badge variant="secondary" className="capitalize">
+                                        {review.properties?.name || 'Unknown Property'}
+                                      </Badge>
+                                      <img
+                                        src={review.platform === 'airbnb' ? '/airbnb-logo.png' : '/vrbo-logo.png'}
+                                        alt={review.platform === 'airbnb' ? 'Airbnb' : 'VRBO'}
+                                        className={review.platform === 'airbnb' ? 'h-4 w-auto' : 'h-5 w-auto'}
+                                      />
+                                      <div className="flex items-center gap-1">
+                                        <svg className="w-4 h-4 text-yellow-500 fill-current" viewBox="0 0 24 24">
+                                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                        </svg>
+                                        <span className="font-bold text-foreground">
+                                          {review.rating} / {review.platform === 'airbnb' ? '5' : '10'}
+                                        </span>
+                                      </div>
+                                      <span className="text-sm text-muted-foreground">
+                                        {new Date(review.review_date).toLocaleDateString('en-US', {
+                                          year: 'numeric',
+                                          month: 'long',
+                                          day: 'numeric'
+                                        })}
+                                      </span>
+                                    </div>
+                                    {review.review_text && (
+                                      <p className="text-sm text-muted-foreground mt-2">{review.review_text}</p>
+                                    )}
                                   </div>
-                                  <span className="text-sm text-muted-foreground">
-                                    {new Date(review.review_date).toLocaleDateString('en-US', {
-                                      year: 'numeric',
-                                      month: 'long',
-                                      day: 'numeric'
-                                    })}
-                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteReview(review.id)}
+                                    className="ml-4 h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </Button>
                                 </div>
-                                {review.review_text && (
-                                  <p className="text-sm text-muted-foreground mt-2">{review.review_text}</p>
-                                )}
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => deleteReview(review.id)}
-                                className="ml-4 h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </Button>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
+                            </Card>
+                          ))}
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
               </Card>

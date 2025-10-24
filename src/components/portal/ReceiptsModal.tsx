@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Listbox, Transition } from '@headlessui/react';
 import { formatMoney } from '@/lib/utils';
 
 type Receipt = {
@@ -268,17 +269,55 @@ export default function ReceiptsModal({
                   </div>
                   <div>
                     <Label htmlFor="receipt-property">Property *</Label>
-                    <select
-                      id="receipt-property"
-                      value={uploadPropertyId}
-                      onChange={(e) => setUploadPropertyId(e.target.value)}
-                      className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 mt-1"
-                    >
-                      <option value="">Select property...</option>
-                      {properties.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
+                    <Listbox value={uploadPropertyId} onChange={setUploadPropertyId}>
+                      <div className="relative mt-1">
+                        <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                          <span className="block truncate text-sm">
+                            {uploadPropertyId ? properties.find(p => p.id === uploadPropertyId)?.name : 'Select property...'}
+                          </span>
+                          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                            <svg className="h-5 w-5 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 3a.75.75 0 01.55.24l3.25 3.5a.75.75 0 11-1.1 1.02L10 4.852 7.3 7.76a.75.75 0 01-1.1-1.02l3.25-3.5A.75.75 0 0110 3zm-3.76 9.2a.75.75 0 011.06.04l2.7 2.908 2.7-2.908a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0l-3.25-3.5a.75.75 0 01.04-1.06z" clipRule="evenodd" />
+                            </svg>
+                          </span>
+                        </Listbox.Button>
+                        <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
+                          <Listbox.Options className="absolute left-0 mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                            <Listbox.Option
+                              value=""
+                              className={({ active }) =>
+                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                }`
+                              }
+                            >
+                              {({ selected }) => (
+                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                  Select property...
+                                </span>
+                              )}
+                            </Listbox.Option>
+                            {properties.map(p => (
+                              <Listbox.Option
+                                key={p.id}
+                                value={p.id}
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                    active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                  }`
+                                }
+                              >
+                                {({ selected }) => (
+                                  <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                    {p.name}
+                                  </span>
+                                )}
+                              </Listbox.Option>
+                            ))}
+                          </Listbox.Options>
+                        </Transition>
+                      </div>
+                    </Listbox>
                   </div>
                   <div>
                     <Label htmlFor="receipt-date">Receipt Date (Optional)</Label>
@@ -375,18 +414,41 @@ export default function ReceiptsModal({
                     <Label htmlFor="month-filter" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
                       Month:
                     </Label>
-                    <select
-                      id="month-filter"
-                      value={selectedMonth}
-                      onChange={(e) => setSelectedMonth(e.target.value)}
-                      className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                    >
-                      {availableMonths.map((m) => (
-                        <option key={m.value} value={m.value}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </select>
+                    <Listbox value={selectedMonth} onChange={setSelectedMonth}>
+                      <div className="relative w-full">
+                        <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                          <span className="block truncate text-sm">
+                            {availableMonths.find(m => m.value === selectedMonth)?.label || selectedMonth}
+                          </span>
+                          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                            <svg className="h-5 w-5 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 3a.75.75 0 01.55.24l3.25 3.5a.75.75 0 11-1.1 1.02L10 4.852 7.3 7.76a.75.75 0 01-1.1-1.02l3.25-3.5A.75.75 0 0110 3zm-3.76 9.2a.75.75 0 011.06.04l2.7 2.908 2.7-2.908a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0l-3.25-3.5a.75.75 0 01.04-1.06z" clipRule="evenodd" />
+                            </svg>
+                          </span>
+                        </Listbox.Button>
+                        <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
+                          <Listbox.Options className="absolute left-0 mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                            {availableMonths.map((m) => (
+                              <Listbox.Option
+                                key={m.value}
+                                value={m.value}
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                    active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                  }`
+                                }
+                              >
+                                {({ selected }) => (
+                                  <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                    {m.label}
+                                  </span>
+                                )}
+                              </Listbox.Option>
+                            ))}
+                          </Listbox.Options>
+                        </Transition>
+                      </div>
+                    </Listbox>
                   </div>
 
                   {/* Category Filter */}
@@ -394,19 +456,113 @@ export default function ReceiptsModal({
                     <Label htmlFor="category-filter" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
                       Category:
                     </Label>
-                    <select
-                      id="category-filter"
-                      value={receiptCategoryFilter}
-                      onChange={(e) => setReceiptCategoryFilter(e.target.value)}
-                      className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                    >
-                      <option value="all">All Categories</option>
-                      <option value="cleanings">Cleanings</option>
-                      <option value="repairs">Repairs</option>
-                      <option value="maintenance">Maintenance</option>
-                      <option value="restocks">Restocks</option>
-                      <option value="photography">Photography</option>
-                    </select>
+                    <Listbox value={receiptCategoryFilter} onChange={setReceiptCategoryFilter}>
+                      <div className="relative w-full">
+                        <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                          <span className="block truncate text-sm">
+                            {receiptCategoryFilter === 'all' && 'All Categories'}
+                            {receiptCategoryFilter === 'cleanings' && 'Cleanings'}
+                            {receiptCategoryFilter === 'repairs' && 'Repairs'}
+                            {receiptCategoryFilter === 'maintenance' && 'Maintenance'}
+                            {receiptCategoryFilter === 'restocks' && 'Restocks'}
+                            {receiptCategoryFilter === 'photography' && 'Photography'}
+                          </span>
+                          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                            <svg className="h-5 w-5 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 3a.75.75 0 01.55.24l3.25 3.5a.75.75 0 11-1.1 1.02L10 4.852 7.3 7.76a.75.75 0 01-1.1-1.02l3.25-3.5A.75.75 0 0110 3zm-3.76 9.2a.75.75 0 011.06.04l2.7 2.908 2.7-2.908a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0l-3.25-3.5a.75.75 0 01.04-1.06z" clipRule="evenodd" />
+                            </svg>
+                          </span>
+                        </Listbox.Button>
+                        <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
+                          <Listbox.Options className="absolute left-0 mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                            <Listbox.Option
+                              value="all"
+                              className={({ active }) =>
+                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                }`
+                              }
+                            >
+                              {({ selected }) => (
+                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                  All Categories
+                                </span>
+                              )}
+                            </Listbox.Option>
+                            <Listbox.Option
+                              value="cleanings"
+                              className={({ active }) =>
+                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                }`
+                              }
+                            >
+                              {({ selected }) => (
+                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                  Cleanings
+                                </span>
+                              )}
+                            </Listbox.Option>
+                            <Listbox.Option
+                              value="repairs"
+                              className={({ active }) =>
+                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                }`
+                              }
+                            >
+                              {({ selected }) => (
+                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                  Repairs
+                                </span>
+                              )}
+                            </Listbox.Option>
+                            <Listbox.Option
+                              value="maintenance"
+                              className={({ active }) =>
+                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                }`
+                              }
+                            >
+                              {({ selected }) => (
+                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                  Maintenance
+                                </span>
+                              )}
+                            </Listbox.Option>
+                            <Listbox.Option
+                              value="restocks"
+                              className={({ active }) =>
+                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                }`
+                              }
+                            >
+                              {({ selected }) => (
+                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                  Restocks
+                                </span>
+                              )}
+                            </Listbox.Option>
+                            <Listbox.Option
+                              value="photography"
+                              className={({ active }) =>
+                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
+                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                                }`
+                              }
+                            >
+                              {({ selected }) => (
+                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                  Photography
+                                </span>
+                              )}
+                            </Listbox.Option>
+                          </Listbox.Options>
+                        </Transition>
+                      </div>
+                    </Listbox>
                   </div>
                 </div>
               </div>

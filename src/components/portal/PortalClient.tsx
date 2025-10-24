@@ -432,63 +432,151 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
   // Calculate plan fees based on gross revenue and plan percentage
   const planFeesInCents = plan && activeKpi ? Math.floor((activeKpi.gross_revenue_cents * plan.percent) / 100) : 0;
 
+  // Helper function to get icon SVG for each metric
+  const getMetricIcon = (metricType: string, isReceipts: boolean) => {
+    if (isReceipts) {
+      return (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      );
+    }
+
+    switch (metricType) {
+      case 'gross_revenue':
+        return (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      case 'expenses':
+        return (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        );
+      case 'net_revenue':
+        return (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+        );
+      case 'nights_booked':
+        return (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+        );
+      case 'occupancy_rate':
+        return (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        );
+      case 'vacancy_rate':
+        return (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+          </svg>
+        );
+    }
+  };
+
   const metricCards = [
     {
       label: 'Gross Revenue',
       value: formatMoney(activeKpi?.gross_revenue_cents),
       metricType: 'gross_revenue' as MetricType,
-      icon: '💰',
       isReceipts: false,
+      gradient: 'from-emerald-500/10 to-green-500/5',
+      iconBg: 'bg-gradient-to-br from-emerald-500 to-green-600',
+      iconColor: 'text-white',
+      accentColor: 'border-l-emerald-500/30',
+      hoverShadow: 'hover:shadow-emerald-500/20',
     },
     {
       label: 'Expenses',
       value: formatMoney(activeKpi?.expenses_cents),
       metricType: 'expenses' as MetricType,
-      icon: '💸',
       isReceipts: false,
+      gradient: 'from-orange-500/10 to-red-500/5',
+      iconBg: 'bg-gradient-to-br from-orange-500 to-red-600',
+      iconColor: 'text-white',
+      accentColor: 'border-l-orange-500/30',
+      hoverShadow: 'hover:shadow-orange-500/20',
     },
     {
       label: `TruHost Fees (${plan?.percent || 0}%)`,
       value: formatMoney(planFeesInCents),
       metricType: 'expenses' as MetricType,
-      icon: '🏢',
       isReceipts: false,
-      isCalculated: true, // This is a calculated value, not clickable
+      isCalculated: true,
+      gradient: 'from-purple-500/10 to-indigo-500/5',
+      iconBg: 'bg-gradient-to-br from-purple-500 to-indigo-600',
+      iconColor: 'text-white',
+      accentColor: 'border-l-purple-500/30',
+      hoverShadow: 'hover:shadow-purple-500/20',
     },
     {
       label: 'Net Revenue',
       value: formatMoney(activeKpi?.net_revenue_cents),
       metricType: 'net_revenue' as MetricType,
-      icon: '📈',
       isReceipts: false,
+      gradient: 'from-green-500/10 to-teal-500/5',
+      iconBg: 'bg-gradient-to-br from-green-500 to-teal-600',
+      iconColor: 'text-white',
+      accentColor: 'border-l-green-500/30',
+      hoverShadow: 'hover:shadow-green-500/20',
     },
     {
       label: 'Nights Booked',
       value: formatNumber(activeKpi?.nights_booked),
       metricType: 'nights_booked' as MetricType,
-      icon: '🏠',
       isReceipts: false,
+      gradient: 'from-blue-500/10 to-cyan-500/5',
+      iconBg: 'bg-gradient-to-br from-blue-500 to-cyan-600',
+      iconColor: 'text-white',
+      accentColor: 'border-l-blue-500/30',
+      hoverShadow: 'hover:shadow-blue-500/20',
     },
     {
       label: 'Occupancy',
       value: formatPercent(activeKpi?.occupancy_rate),
       metricType: 'occupancy_rate' as MetricType,
-      icon: '📊',
       isReceipts: false,
+      gradient: 'from-sky-500/10 to-blue-500/5',
+      iconBg: 'bg-gradient-to-br from-sky-500 to-blue-600',
+      iconColor: 'text-white',
+      accentColor: 'border-l-sky-500/30',
+      hoverShadow: 'hover:shadow-sky-500/20',
     },
     {
       label: 'Vacancy',
       value: formatPercent(activeKpi?.vacancy_rate),
       metricType: 'vacancy_rate' as MetricType,
-      icon: '📉',
       isReceipts: false,
+      gradient: 'from-slate-500/10 to-gray-500/5',
+      iconBg: 'bg-gradient-to-br from-slate-500 to-gray-600',
+      iconColor: 'text-white',
+      accentColor: 'border-l-slate-500/30',
+      hoverShadow: 'hover:shadow-slate-500/20',
     },
     {
       label: 'Receipts',
       value: 'View All',
       metricType: 'expenses' as MetricType,
-      icon: '📄',
       isReceipts: true,
+      gradient: 'from-amber-500/10 to-yellow-500/5',
+      iconBg: 'bg-gradient-to-br from-amber-500 to-yellow-600',
+      iconColor: 'text-white',
+      accentColor: 'border-l-amber-500/30',
+      hoverShadow: 'hover:shadow-amber-500/20',
     },
   ];
 
@@ -526,7 +614,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 asChild
                 variant="outline"
                 size="sm"
-                className="relative border-border hover:bg-primary/5 hover:border-primary transition-all duration-300 cursor-pointer"
+                className="relative border-border hover:bg-primary/5 hover:border-primary hover:scale-105 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 cursor-pointer"
               >
                 <Link href={`/portal/${orgId}/messages`} className="flex items-center gap-2">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="mr-0.5">
@@ -788,22 +876,39 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                   </Badge>
                 </div>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-2 px-4 pt-4 pb-8">
                 {metricCards.map((card, index) => (
-              <Card
+              <div
                 key={card.label}
-                className={`transition-all duration-500 ease-in-out bg-card overflow-hidden group animate-fade-in ${
+                className={`relative transition-all duration-700 ease-in-out bg-white overflow-visible group animate-fade-in rounded-2xl ${
                   (card as any).isCalculated
                     ? 'cursor-default'
-                    : 'cursor-pointer hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/3 hover:border-primary/20'
+                    : 'cursor-pointer'
                 }`}
                 style={{
                   animationDelay: `${index * 50}ms`,
-                  border: '1px solid #E1ECDB',
-                  transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '1rem',
+                  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+                  transition: 'all 700ms cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+                onMouseEnter={(e) => {
+                  if ((card as any).isCalculated) return;
+                  e.currentTarget.style.transform = 'scale(1.02)';
+                  e.currentTarget.style.boxShadow = '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)';
+                  // Fade out the left border
+                  const borderDiv = e.currentTarget.querySelector('.accent-border') as HTMLElement;
+                  if (borderDiv) borderDiv.style.opacity = '0';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)';
+                  // Fade in the left border
+                  const borderDiv = e.currentTarget.querySelector('.accent-border') as HTMLElement;
+                  if (borderDiv) borderDiv.style.opacity = '1';
                 }}
                 onClick={() => {
-                  if ((card as any).isCalculated) return; // Don't open chart for calculated values
+                  if ((card as any).isCalculated) return;
                   if (card.isReceipts) {
                     setShowReceiptsModal(true);
                   } else {
@@ -811,30 +916,66 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                   }
                 }}
               >
-                <CardHeader className="pb-3">
-                  <CardDescription className="text-muted-foreground font-medium transition-colors duration-500 ease-in-out group-hover:text-foreground">
-                    {card.label}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-semibold text-foreground mb-2 tabular-nums tracking-tight">
-                    {card.value}
+                {/* Left Accent Border */}
+                <div
+                  className={`accent-border absolute ${card.accentColor} transition-opacity duration-700 ease-in-out`}
+                  style={{
+                    left: '0',
+                    top: '0',
+                    bottom: '0',
+                    width: '4px',
+                    borderTopLeftRadius: '1rem',
+                    borderBottomLeftRadius: '1rem',
+                  }}
+                ></div>
+
+                {/* Gradient Background */}
+                <div
+                  className={`absolute bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-700 rounded-2xl`}
+                  style={{
+                    top: '0',
+                    left: '0',
+                    right: '0',
+                    bottom: '0',
+                  }}
+                ></div>
+
+                <CardContent className="relative p-6">
+                  {/* Header with Icon */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <CardDescription className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                        {card.label}
+                      </CardDescription>
+                    </div>
+                    <div className={`${card.iconBg} ${card.iconColor} p-3 rounded-xl shadow-lg transform transition-all duration-700 ease-in-out group-hover:scale-110 group-hover:rotate-6`}>
+                      {getMetricIcon(card.metricType, card.isReceipts)}
+                    </div>
                   </div>
+
+                  {/* Value */}
+                  <div className="mb-3">
+                    <div className="text-3xl font-bold text-gray-900 tabular-nums tracking-tight">
+                      {card.value}
+                    </div>
+                  </div>
+
+                  {/* Footer Action */}
                   {!(card as any).isCalculated && (
-                    <div className="flex items-center gap-1 text-xs text-primary font-medium transition-all duration-500 ease-in-out group-hover:gap-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 transition-all duration-700 ease-in-out group-hover:text-gray-700 group-hover:gap-2.5">
                       <span>{card.isReceipts ? 'View Receipts' : 'View History'}</span>
-                      <svg className="w-3 h-3 transition-transform duration-500 ease-in-out group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      <svg className="w-4 h-4 transition-transform duration-700 ease-in-out group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                       </svg>
                     </div>
                   )}
                   {(card as any).isCalculated && (
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs font-medium text-gray-400 italic">
                       Calculated Value
                     </div>
                   )}
                 </CardContent>
-                </Card>
+              </div>
                 ))}
               </div>
               {!activeKpi && (
@@ -1221,7 +1362,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                               <CardContent className="pt-6">
                                 <div className="flex items-start justify-between mb-3">
                                   <div className="flex items-center gap-3">
-                                    <Badge variant="secondary" className="capitalize">
+                                    <Badge className="capitalize bg-primary/10 text-foreground border-primary/20 hover:bg-primary/20 transition-colors duration-300">
                                       {review.properties?.name || 'Unknown Property'}
                                     </Badge>
                                     <img
