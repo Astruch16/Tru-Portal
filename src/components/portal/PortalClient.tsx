@@ -843,29 +843,82 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
           <div className="mb-6">
             <button
               onClick={() => setIsPerformanceExpanded(!isPerformanceExpanded)}
-              className="w-full flex items-center gap-3 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2 cursor-pointer"
+              className="w-full flex items-center justify-between p-4 rounded-xl transition-all duration-500 cursor-pointer group relative overflow-hidden backdrop-blur-sm"
+              style={{
+                background: 'linear-gradient(135deg, #9db89605 0%, transparent 100%)',
+                border: '2px solid #9db89620',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, #9db89615 0%, #9db89605 100%)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 16px -4px #9db89630';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, #9db89605 0%, transparent 100%)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             >
-              <svg
-                className={`w-5 h-5 text-primary transition-transform duration-300 ${isPerformanceExpanded ? 'rotate-90' : ''}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+              <div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                style={{
+                  background: 'linear-gradient(90deg, #9db89600, #9db89640, #9db89600)',
+                  backgroundSize: '200% 100%',
+                  animation: 'shimmer 3s infinite',
+                  pointerEvents: 'none',
+                }}
+              />
+              <div className="flex items-center gap-3 relative z-10">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
+                  style={{
+                    background: 'linear-gradient(135deg, #9db89620, #9db89640)',
+                    boxShadow: '0 4px 12px #9db89630',
+                  }}
+                >
+                  <svg className="w-6 h-6 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-foreground">Performance Metrics</h2>
+                  {viewMode === 'annual' && (
+                    <Badge className="mt-1 bg-primary/20 text-primary font-semibold capitalize hover:bg-primary/30 border-primary/30">
+                      Year to Date {new Date().getFullYear()}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <div
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105 relative z-10"
+                style={{
+                  background: 'linear-gradient(135deg, #9db89615, #9db89625)',
+                  border: '1px solid #9db89640',
+                  boxShadow: '0 4px 12px #9db89620',
+                }}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-              <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Performance Metrics
-              </h2>
-              {viewMode === 'annual' && (
-                <Badge className="bg-primary text-primary-foreground font-semibold capitalize hover:bg-primary/90">
-                  Year to Date {new Date().getFullYear()}
-                </Badge>
-              )}
+                <span className="text-xs font-bold tracking-wide text-white">
+                  {isPerformanceExpanded ? 'HIDE' : 'SHOW'}
+                </span>
+                <div className="relative w-5 h-5">
+                  <svg
+                    className={`absolute inset-0 transition-all duration-700 ${isPerformanceExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    style={{ color: '#9db896' }}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </button>
-            <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isPerformanceExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div
+              className={`overflow-hidden ${isPerformanceExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}
+              style={{
+                transition: 'max-height 1000ms cubic-bezier(0.4, 0, 0.2, 1), opacity 1000ms cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
               {selectedProperty && (
                 <div className="mt-2 flex items-center gap-2">
                   <Badge variant="outline" className="text-sm font-medium border-primary/30 bg-primary/5 text-black">
@@ -1001,29 +1054,84 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
         <div className="mb-8 animate-fade-in" style={{ animationDelay: '500ms' }}>
           <button
             onClick={() => setIsBookingsExpanded(!isBookingsExpanded)}
-            className="w-full flex items-center gap-3 mb-6 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2 cursor-pointer"
+            className="w-full flex items-center justify-between mb-6 p-4 rounded-xl transition-all duration-500 cursor-pointer group relative overflow-hidden backdrop-blur-sm"
+            style={{
+              background: 'linear-gradient(135deg, #9db89605 0%, transparent 100%)',
+              border: '2px solid #9db89620',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #9db89615 0%, #9db89605 100%)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 16px -4px #9db89630';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #9db89605 0%, transparent 100%)';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           >
-            <svg
-              className={`w-5 h-5 text-primary transition-transform duration-300 ${isBookingsExpanded ? 'rotate-90' : ''}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+            <div
+              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              style={{
+                background: 'linear-gradient(90deg, #9db89600, #9db89640, #9db89600)',
+                backgroundSize: '200% 100%',
+                animation: 'shimmer 3s infinite',
+                pointerEvents: 'none',
+              }}
+            />
+            <div className="flex items-center gap-3 relative z-10">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
+                style={{
+                  background: 'linear-gradient(135deg, #9db89620, #9db89640)',
+                  boxShadow: '0 4px 12px #9db89630',
+                }}
+              >
+                <svg className="w-6 h-6 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground">Bookings</h2>
+                {bookings.length > 0 && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary">
+                      {bookings.length} total
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div
+              className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105 relative z-10"
+              style={{
+                background: 'linear-gradient(135deg, #9db89615, #9db89625)',
+                border: '1px solid #9db89640',
+                boxShadow: '0 4px 12px #9db89620',
+              }}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Bookings
-              {bookings.length > 0 && (
-                <Badge variant="outline" className="ml-2 bg-primary/5 border-primary/30 text-black">
-                  {bookings.length}
-                </Badge>
-              )}
-            </h2>
+              <span className="text-xs font-bold tracking-wide text-white">
+                {isBookingsExpanded ? 'HIDE' : 'SHOW'}
+              </span>
+              <div className="relative w-5 h-5">
+                <svg
+                  className={`absolute inset-0 transition-all duration-700 ${isBookingsExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  style={{ color: '#9db896' }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           </button>
-          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isBookingsExpanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div
+            className={`overflow-hidden ${isBookingsExpanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}
+            style={{
+              transition: 'max-height 1000ms cubic-bezier(0.4, 0, 0.2, 1), opacity 1000ms cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
           <div className="flex items-center justify-between mb-6">
             {/* Status Filter */}
             <div className="flex items-center gap-2 text-sm">
@@ -1229,27 +1337,78 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
           <div className="mb-6">
             <button
               onClick={() => setIsReviewsExpanded(!isReviewsExpanded)}
-              className="w-full flex items-center gap-3 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2 cursor-pointer"
+              className="w-full flex items-center justify-between p-4 rounded-xl transition-all duration-500 cursor-pointer group relative overflow-hidden backdrop-blur-sm"
+              style={{
+                background: 'linear-gradient(135deg, #9db89605 0%, transparent 100%)',
+                border: '2px solid #9db89620',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, #9db89615 0%, #9db89605 100%)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 16px -4px #9db89630';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, #9db89605 0%, transparent 100%)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             >
-              <svg
-                className={`w-5 h-5 text-primary transition-transform duration-300 ${isReviewsExpanded ? 'rotate-90' : ''}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+              <div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                style={{
+                  background: 'linear-gradient(90deg, #9db89600, #9db89640, #9db89600)',
+                  backgroundSize: '200% 100%',
+                  animation: 'shimmer 3s infinite',
+                  pointerEvents: 'none',
+                }}
+              />
+              <div className="flex items-center gap-3 relative z-10">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
+                  style={{
+                    background: 'linear-gradient(135deg, #9db89620, #9db89640)',
+                    boxShadow: '0 4px 12px #9db89630',
+                  }}
+                >
+                  <svg className="w-6 h-6 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-foreground">Reviews</h2>
+              </div>
+              <div
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105 relative z-10"
+                style={{
+                  background: 'linear-gradient(135deg, #9db89615, #9db89625)',
+                  border: '1px solid #9db89640',
+                  boxShadow: '0 4px 12px #9db89620',
+                }}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-              <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                </svg>
-                Reviews
-              </h2>
+                <span className="text-xs font-bold tracking-wide text-white">
+                  {isReviewsExpanded ? 'HIDE' : 'SHOW'}
+                </span>
+                <div className="relative w-5 h-5">
+                  <svg
+                    className={`absolute inset-0 transition-all duration-700 ${isReviewsExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    style={{ color: '#9db896' }}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </button>
           </div>
 
-          {isReviewsExpanded && (
-            <div className="space-y-4 animate-fade-in">
+          <div
+            className={`overflow-hidden ${isReviewsExpanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}
+            style={{
+              transition: 'max-height 1000ms cubic-bezier(0.4, 0, 0.2, 1), opacity 1000ms cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            <div className="space-y-4">
               {loadingReviews ? (
                 <Card className="shadow-md animate-fade-in" style={{ border: '1px solid #E1ECDB' }}>
                   <CardContent className="py-8">
@@ -1407,34 +1566,84 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 </>
               )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Revenue & Expenses */}
         <div className="mb-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
           <button
             onClick={() => setIsRevenueExpanded(!isRevenueExpanded)}
-            className="w-full flex items-center gap-3 mb-6 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2 cursor-pointer"
+            className="w-full flex items-center justify-between mb-6 p-4 rounded-xl transition-all duration-500 cursor-pointer group relative overflow-hidden backdrop-blur-sm"
+            style={{
+              background: 'linear-gradient(135deg, #9db89605 0%, transparent 100%)',
+              border: '2px solid #9db89620',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #9db89615 0%, #9db89605 100%)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 16px -4px #9db89630';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #9db89605 0%, transparent 100%)';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           >
-            <svg
-              className={`w-5 h-5 text-primary transition-transform duration-300 ${isRevenueExpanded ? 'rotate-90' : ''}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+            <div
+              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              style={{
+                background: 'linear-gradient(90deg, #9db89600, #9db89640, #9db89600)',
+                backgroundSize: '200% 100%',
+                animation: 'shimmer 3s infinite',
+                pointerEvents: 'none',
+              }}
+            />
+            <div className="flex items-center gap-3 relative z-10">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
+                style={{
+                  background: 'linear-gradient(135deg, #9db89620, #9db89640)',
+                  boxShadow: '0 4px 12px #9db89630',
+                }}
+              >
+                <svg className="w-6 h-6 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground">Revenue & Expenses</h2>
+                {ledgerEntries.length > 0 && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary">
+                      {ledgerEntries.length} entries
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div
+              className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105 relative z-10"
+              style={{
+                background: 'linear-gradient(135deg, #9db89615, #9db89625)',
+                border: '1px solid #9db89640',
+                boxShadow: '0 4px 12px #9db89620',
+              }}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Revenue & Expenses
-              {ledgerEntries.length > 0 && (
-                <Badge variant="outline" className="ml-2 bg-primary/5 border-primary/30 text-black">
-                  {ledgerEntries.length}
-                </Badge>
-              )}
-            </h2>
+              <span className="text-xs font-bold tracking-wide text-white">
+                {isRevenueExpanded ? 'HIDE' : 'SHOW'}
+              </span>
+              <div className="relative w-5 h-5">
+                <svg
+                  className={`absolute inset-0 transition-all duration-700 ${isRevenueExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  style={{ color: '#9db896' }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           </button>
 
           {/* Month Filter - Outside collapsible to prevent clipping */}
@@ -1508,7 +1717,12 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
           </div>
 
           {/* Collapsible content */}
-          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isRevenueExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div
+            className={`overflow-hidden ${isRevenueExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}
+            style={{
+              transition: 'max-height 1000ms cubic-bezier(0.4, 0, 0.2, 1), opacity 1000ms cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
           {ledgerEntries.length === 0 ? (
             <Card className="border-border bg-card shadow-sm">
               <CardContent className="py-8 text-center text-muted-foreground">
@@ -1635,27 +1849,77 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
         <div className="mb-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
           <button
             onClick={() => setIsInvoicesExpanded(!isInvoicesExpanded)}
-            className="w-full flex items-center gap-3 mb-6 hover:bg-muted/30 transition-all duration-300 text-left group rounded-lg p-2 -ml-2 cursor-pointer"
+            className="w-full flex items-center justify-between mb-6 p-4 rounded-xl transition-all duration-500 cursor-pointer group relative overflow-hidden backdrop-blur-sm"
+            style={{
+              background: 'linear-gradient(135deg, #9db89605 0%, transparent 100%)',
+              border: '2px solid #9db89620',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #9db89615 0%, #9db89605 100%)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 16px -4px #9db89630';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #9db89605 0%, transparent 100%)';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           >
-            <svg
-              className={`w-5 h-5 text-primary transition-transform duration-300 ${isInvoicesExpanded ? 'rotate-90' : ''}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+            <div
+              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              style={{
+                background: 'linear-gradient(90deg, #9db89600, #9db89640, #9db89600)',
+                backgroundSize: '200% 100%',
+                animation: 'shimmer 3s infinite',
+                pointerEvents: 'none',
+              }}
+            />
+            <div className="flex items-center gap-3 relative z-10">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
+                style={{
+                  background: 'linear-gradient(135deg, #9db89620, #9db89640)',
+                  boxShadow: '0 4px 12px #9db89630',
+                }}
+              >
+                <svg className="w-6 h-6 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground">Invoices</h2>
+                {invoices.length > 0 && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary">
+                      {invoices.length} total
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div
+              className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105 relative z-10"
+              style={{
+                background: 'linear-gradient(135deg, #9db89615, #9db89625)',
+                border: '1px solid #9db89640',
+                boxShadow: '0 4px 12px #9db89620',
+              }}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Invoices
-              {invoices.length > 0 && (
-                <Badge variant="outline" className="ml-2 bg-primary/5 border-primary/30 text-black">
-                  {invoices.length}
-                </Badge>
-              )}
-            </h2>
+              <span className="text-xs font-bold tracking-wide text-white">
+                {isInvoicesExpanded ? 'HIDE' : 'SHOW'}
+              </span>
+              <div className="relative w-5 h-5">
+                <svg
+                  className={`absolute inset-0 transition-all duration-700 ${isInvoicesExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  style={{ color: '#9db896' }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           </button>
 
           {/* Month Filter - Outside collapsible to prevent clipping */}
@@ -1729,7 +1993,12 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
           </div>
 
           {/* Collapsible content */}
-          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isInvoicesExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div
+            className={`overflow-hidden ${isInvoicesExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}
+            style={{
+              transition: 'max-height 1000ms cubic-bezier(0.4, 0, 0.2, 1), opacity 1000ms cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
           {invoices.length === 0 ? (
             <Card className="border-border bg-card shadow-sm">
               <CardContent className="py-8 text-center text-muted-foreground">

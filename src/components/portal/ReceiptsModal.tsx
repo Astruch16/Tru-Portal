@@ -216,7 +216,7 @@ export default function ReceiptsModal({
         }}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-[#a8c5a0] to-[#8fb389] text-white px-6 py-5 rounded-t-2xl border-b border-[#E1ECDB]/20" style={{ background: 'linear-gradient(to right, #9db896, #88a882)' }}>
+        <div className="sticky top-0 text-white px-6 py-5 rounded-t-2xl border-b border-white/20 z-10" style={{ background: 'linear-gradient(to right, #eab308, #ca8a04)', backgroundColor: '#eab308' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-lg bg-white/20 flex items-center justify-center">
@@ -234,7 +234,7 @@ export default function ReceiptsModal({
             <Button
               onClick={onClose}
               variant="ghost"
-              className="text-white hover:bg-white/20 transition-colors"
+              className="text-white hover:bg-white/20 transition-colors cursor-pointer"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -271,7 +271,7 @@ export default function ReceiptsModal({
                     <Label htmlFor="receipt-property">Property *</Label>
                     <Listbox value={uploadPropertyId} onChange={setUploadPropertyId}>
                       <div className="relative mt-1">
-                        <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                        <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border transition-all" style={{ borderColor: '#e5e7eb' }} onMouseEnter={(e) => e.currentTarget.style.borderColor = '#eab30880'} onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e5e7eb'} onFocus={(e) => { e.currentTarget.style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px #eab30840'; }} onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; }}>
                           <span className="block truncate text-sm">
                             {uploadPropertyId ? properties.find(p => p.id === uploadPropertyId)?.name : 'Select property...'}
                           </span>
@@ -285,14 +285,13 @@ export default function ReceiptsModal({
                           <Listbox.Options className="absolute left-0 mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
                             <Listbox.Option
                               value=""
-                              className={({ active }) =>
-                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
-                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
-                                }`
-                              }
+                              className={({ active }) => `relative cursor-pointer select-none py-2 pl-3 pr-4`}
                             >
-                              {({ selected }) => (
-                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                              {({ selected, active }) => (
+                                <span
+                                  className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}
+                                  style={active ? { backgroundColor: '#eab30810', color: '#ca8a04' } : {}}
+                                >
                                   Select property...
                                 </span>
                               )}
@@ -365,17 +364,41 @@ export default function ReceiptsModal({
           )}
 
           {/* Receipts List */}
-          <Card className="shadow-lg bg-white" style={{ border: '1px solid #E1ECDB' }}>
+          <Card className="shadow-lg bg-white" style={{ border: '1px solid #eab30820' }}>
             {/* Header - Always Visible */}
             <button
               onClick={() => setIsReceiptsExpanded(!isReceiptsExpanded)}
-              className="w-full text-left"
+              className={`w-full text-left cursor-pointer group relative overflow-hidden rounded-t-lg ${!isReceiptsExpanded ? 'rounded-b-lg' : ''} transition-all duration-500 backdrop-blur-sm`}
+              style={{
+                background: 'linear-gradient(135deg, #eab30805 0%, transparent 100%)',
+                borderBottom: isReceiptsExpanded ? '2px solid #eab30820' : 'none',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, #eab30815 0%, #eab30805 100%)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 16px -4px #eab30830';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, #eab30805 0%, transparent 100%)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             >
-              <div className="p-6 hover:bg-[#E1ECDB]/10 transition-colors cursor-pointer">
+              {/* Animated gradient border overlay */}
+              <div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                style={{
+                  background: 'linear-gradient(90deg, #eab30800, #eab30840, #eab30800)',
+                  backgroundSize: '200% 100%',
+                  animation: 'shimmer 3s infinite',
+                  pointerEvents: 'none',
+                }}
+              />
+              <div className="p-6 relative z-10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#E1ECDB]/30 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-[#9db896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12" style={{ background: 'linear-gradient(135deg, #eab30820, #eab30840)', boxShadow: '0 4px 12px #eab30830' }}>
+                      <svg className="w-5 h-5 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                       </svg>
                     </div>
@@ -386,24 +409,33 @@ export default function ReceiptsModal({
                       <p className="text-sm text-muted-foreground">View and manage receipts</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
-                    <span className="text-xs font-medium text-gray-600">
-                      {isReceiptsExpanded ? 'Hide' : 'Show'}
+                  <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105" style={{ background: 'linear-gradient(135deg, #eab30815, #eab30825)', border: '1px solid #eab30840', boxShadow: '0 4px 12px #eab30820' }}>
+                    <span className="text-xs font-bold tracking-wide text-white">
+                      {isReceiptsExpanded ? 'HIDE' : 'SHOW'}
                     </span>
-                    <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isReceiptsExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <div className="relative w-5 h-5">
+                      <svg className={`absolute inset-0 transition-all duration-700 ${isReceiptsExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#eab308' }}>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
             </button>
 
+            {/* Add shimmer keyframe animation */}
+            <style jsx>{`
+              @keyframes shimmer {
+                0% { background-position: -200% 0; }
+                100% { background-position: 200% 0; }
+              }
+            `}</style>
+
             {/* Content - Collapsible */}
             <div
-              className="overflow-hidden transition-all duration-700 ease-in-out"
+              className={`overflow-hidden rounded-b-lg ${isReceiptsExpanded ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'}`}
               style={{
-                maxHeight: isReceiptsExpanded ? '1200px' : '0px',
-                opacity: isReceiptsExpanded ? 1 : 0,
+                transition: 'max-height 1000ms cubic-bezier(0.4, 0, 0.2, 1), opacity 1000ms cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
               {/* Filters */}
@@ -416,7 +448,7 @@ export default function ReceiptsModal({
                     </Label>
                     <Listbox value={selectedMonth} onChange={setSelectedMonth}>
                       <div className="relative w-full">
-                        <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                        <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border transition-all" style={{ borderColor: '#e5e7eb' }} onMouseEnter={(e) => e.currentTarget.style.borderColor = '#eab30880'} onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e5e7eb'} onFocus={(e) => { e.currentTarget.style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px #eab30840'; }} onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; }}>
                           <span className="block truncate text-sm">
                             {availableMonths.find(m => m.value === selectedMonth)?.label || selectedMonth}
                           </span>
@@ -427,19 +459,18 @@ export default function ReceiptsModal({
                           </span>
                         </Listbox.Button>
                         <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-                          <Listbox.Options className="absolute left-0 mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                          <Listbox.Options className="absolute left-0 mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border yellow-scrollbar">
                             {availableMonths.map((m) => (
                               <Listbox.Option
                                 key={m.value}
                                 value={m.value}
-                                className={({ active }) =>
-                                  `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
-                                    active ? 'bg-primary/10 text-primary' : 'text-foreground'
-                                  }`
-                                }
+                                className={({ active }) => `relative cursor-pointer select-none py-2 pl-3 pr-4`}
                               >
-                                {({ selected }) => (
-                                  <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                                {({ selected, active }) => (
+                                  <span
+                                    className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}
+                                    style={active ? { backgroundColor: '#eab30810', color: '#ca8a04' } : {}}
+                                  >
                                     {m.label}
                                   </span>
                                 )}
@@ -458,7 +489,7 @@ export default function ReceiptsModal({
                     </Label>
                     <Listbox value={receiptCategoryFilter} onChange={setReceiptCategoryFilter}>
                       <div className="relative w-full">
-                        <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                        <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border transition-all" style={{ borderColor: '#e5e7eb' }} onMouseEnter={(e) => e.currentTarget.style.borderColor = '#eab30880'} onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e5e7eb'} onFocus={(e) => { e.currentTarget.style.outline = 'none'; e.currentTarget.style.boxShadow = '0 0 0 2px #eab30840'; }} onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; }}>
                           <span className="block truncate text-sm">
                             {receiptCategoryFilter === 'all' && 'All Categories'}
                             {receiptCategoryFilter === 'cleanings' && 'Cleanings'}
@@ -474,87 +505,81 @@ export default function ReceiptsModal({
                           </span>
                         </Listbox.Button>
                         <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-                          <Listbox.Options className="absolute left-0 mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                          <Listbox.Options className="absolute left-0 mt-1 max-h-60 w-full overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border yellow-scrollbar">
                             <Listbox.Option
                               value="all"
-                              className={({ active }) =>
-                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
-                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
-                                }`
-                              }
+                              className={({ active }) => `relative cursor-pointer select-none py-2 pl-3 pr-4`}
                             >
-                              {({ selected }) => (
-                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                              {({ selected, active }) => (
+                                <span
+                                  className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}
+                                  style={active ? { backgroundColor: '#eab30810', color: '#ca8a04' } : {}}
+                                >
                                   All Categories
                                 </span>
                               )}
                             </Listbox.Option>
                             <Listbox.Option
                               value="cleanings"
-                              className={({ active }) =>
-                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
-                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
-                                }`
-                              }
+                              className={({ active }) => `relative cursor-pointer select-none py-2 pl-3 pr-4`}
                             >
-                              {({ selected }) => (
-                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                              {({ selected, active }) => (
+                                <span
+                                  className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}
+                                  style={active ? { backgroundColor: '#eab30810', color: '#ca8a04' } : {}}
+                                >
                                   Cleanings
                                 </span>
                               )}
                             </Listbox.Option>
                             <Listbox.Option
                               value="repairs"
-                              className={({ active }) =>
-                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
-                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
-                                }`
-                              }
+                              className={({ active }) => `relative cursor-pointer select-none py-2 pl-3 pr-4`}
                             >
-                              {({ selected }) => (
-                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                              {({ selected, active }) => (
+                                <span
+                                  className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}
+                                  style={active ? { backgroundColor: '#eab30810', color: '#ca8a04' } : {}}
+                                >
                                   Repairs
                                 </span>
                               )}
                             </Listbox.Option>
                             <Listbox.Option
                               value="maintenance"
-                              className={({ active }) =>
-                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
-                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
-                                }`
-                              }
+                              className={({ active }) => `relative cursor-pointer select-none py-2 pl-3 pr-4`}
                             >
-                              {({ selected }) => (
-                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                              {({ selected, active }) => (
+                                <span
+                                  className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}
+                                  style={active ? { backgroundColor: '#eab30810', color: '#ca8a04' } : {}}
+                                >
                                   Maintenance
                                 </span>
                               )}
                             </Listbox.Option>
                             <Listbox.Option
                               value="restocks"
-                              className={({ active }) =>
-                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
-                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
-                                }`
-                              }
+                              className={({ active }) => `relative cursor-pointer select-none py-2 pl-3 pr-4`}
                             >
-                              {({ selected }) => (
-                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                              {({ selected, active }) => (
+                                <span
+                                  className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}
+                                  style={active ? { backgroundColor: '#eab30810', color: '#ca8a04' } : {}}
+                                >
                                   Restocks
                                 </span>
                               )}
                             </Listbox.Option>
                             <Listbox.Option
                               value="photography"
-                              className={({ active }) =>
-                                `relative cursor-pointer select-none py-2 pl-3 pr-4 ${
-                                  active ? 'bg-primary/10 text-primary' : 'text-foreground'
-                                }`
-                              }
+                              className={({ active }) => `relative cursor-pointer select-none py-2 pl-3 pr-4`}
                             >
-                              {({ selected }) => (
-                                <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
+                              {({ selected, active }) => (
+                                <span
+                                  className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}
+                                  style={active ? { backgroundColor: '#eab30810', color: '#ca8a04' } : {}}
+                                >
                                   Photography
                                 </span>
                               )}

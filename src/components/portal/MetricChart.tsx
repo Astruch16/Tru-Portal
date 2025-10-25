@@ -453,7 +453,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
         }}
       >
         {/* Header */}
-        <div className="sticky top-0 text-white px-6 py-5 rounded-t-2xl border-b border-white/20" style={{ background: config.headerGradient }}>
+        <div className="sticky top-0 text-white px-6 py-5 rounded-t-2xl border-b border-white/20 z-10" style={{ background: config.headerGradient, backgroundColor: config.accentColor }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-lg bg-white/20 flex items-center justify-center">
@@ -867,39 +867,100 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   {/* Header - Always Visible */}
                   <button
                     onClick={() => setIsEntriesExpanded(!isEntriesExpanded)}
-                    className="w-full text-left cursor-pointer"
+                    className={`w-full text-left cursor-pointer group relative overflow-hidden rounded-t-lg ${!isEntriesExpanded ? 'rounded-b-lg' : ''} transition-all duration-500 backdrop-blur-sm`}
+                    style={{
+                      background: `linear-gradient(135deg, ${config.accentColor}05 0%, transparent 100%)`,
+                      borderBottom: isEntriesExpanded ? `2px solid ${config.accentColor}20` : 'none',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = `linear-gradient(135deg, ${config.accentColor}15 0%, ${config.accentColor}05 100%)`;
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = `0 8px 16px -4px ${config.accentColor}30`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = `linear-gradient(135deg, ${config.accentColor}05 0%, transparent 100%)`;
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
                   >
-                    <CardHeader className="hover:bg-[#E1ECDB]/10 transition-colors cursor-pointer">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="flex items-center gap-2">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: config.accentColor }}>
+                    {/* Animated gradient border overlay */}
+                    <div
+                      className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
+                      style={{
+                        background: `linear-gradient(90deg, ${config.accentColor}00, ${config.accentColor}40, ${config.accentColor}00)`,
+                        backgroundSize: '200% 100%',
+                        animation: 'shimmer 3s infinite',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                    <CardHeader
+                      className="relative cursor-pointer"
+                    >
+
+                      <div className="flex items-center justify-between relative z-10">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
+                            style={{
+                              background: `linear-gradient(135deg, ${config.accentColor}20, ${config.accentColor}40)`,
+                              boxShadow: `0 4px 12px ${config.accentColor}30`,
+                            }}
+                          >
+                            <svg className="w-5 h-5 transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: config.accentColor }}>
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                             </svg>
-                            All Entries This Month
-                          </CardTitle>
-                          <CardDescription>
-                            {monthlyEntries.length + monthlyBookings.length} total {monthlyEntries.length + monthlyBookings.length === 1 ? 'entry' : 'entries'}
-                          </CardDescription>
+                          </div>
+                          <div>
+                            <CardTitle className="flex items-center gap-2 text-base font-bold">
+                              All Entries This Month
+                            </CardTitle>
+                            <CardDescription className="flex items-center gap-2 mt-1">
+                              <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold transition-all duration-300" style={{ backgroundColor: `${config.accentColor}20`, color: config.chartColorDark }}>
+                                {monthlyEntries.length + monthlyBookings.length} {monthlyEntries.length + monthlyBookings.length === 1 ? 'entry' : 'entries'}
+                              </span>
+                            </CardDescription>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
-                          <span className="text-xs font-medium text-gray-600">
-                            {isEntriesExpanded ? 'Hide' : 'Show'}
+                        <div
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105"
+                          style={{
+                            background: `linear-gradient(135deg, ${config.accentColor}15, ${config.accentColor}25)`,
+                            border: `1px solid ${config.accentColor}40`,
+                            boxShadow: `0 4px 12px ${config.accentColor}20`,
+                          }}
+                        >
+                          <span className="text-xs font-bold tracking-wide" style={{ color: config.chartColorDark }}>
+                            {isEntriesExpanded ? 'HIDE' : 'SHOW'}
                           </span>
-                          <svg className={`w-5 h-5 transition-transform duration-300 ${isEntriesExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: config.accentColor }}>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
+                          <div className="relative w-5 h-5">
+                            <svg
+                              className={`absolute inset-0 transition-all duration-700 ${isEntriesExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`}
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              style={{ color: config.accentColor }}
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
                         </div>
                       </div>
                     </CardHeader>
                   </button>
 
+                  {/* Add shimmer keyframe animation */}
+                  <style jsx>{`
+                    @keyframes shimmer {
+                      0% { background-position: -200% 0; }
+                      100% { background-position: 200% 0; }
+                    }
+                  `}</style>
+
                   {/* Content - Collapsible */}
                   <div
-                    className="overflow-hidden transition-all duration-700 ease-in-out"
+                    className={`overflow-hidden rounded-b-lg ${isEntriesExpanded ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'}`}
                     style={{
-                      maxHeight: isEntriesExpanded ? '1200px' : '0px',
-                      opacity: isEntriesExpanded ? 1 : 0,
+                      transition: 'max-height 1000ms cubic-bezier(0.4, 0, 0.2, 1), opacity 1000ms cubic-bezier(0.4, 0, 0.2, 1)',
                     }}
                   >
                     {/* Type Filter Buttons (Only for revenue/expense metrics) */}
@@ -1124,33 +1185,80 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   {/* Header - Always Visible */}
                   <button
                     onClick={() => setIsBreakdownExpanded(!isBreakdownExpanded)}
-                    className="w-full text-left cursor-pointer"
+                    className={`w-full text-left cursor-pointer group relative overflow-hidden rounded-t-lg ${!isBreakdownExpanded ? 'rounded-b-lg' : ''} transition-all duration-500 backdrop-blur-sm`}
+                    style={{
+                      background: `linear-gradient(135deg, ${config.accentColor}05 0%, transparent 100%)`,
+                      borderBottom: isBreakdownExpanded ? `2px solid ${config.accentColor}20` : 'none',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = `linear-gradient(135deg, ${config.accentColor}15 0%, ${config.accentColor}05 100%)`;
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = `0 8px 16px -4px ${config.accentColor}30`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = `linear-gradient(135deg, ${config.accentColor}05 0%, transparent 100%)`;
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
                   >
-                    <CardHeader className="hover:bg-[#E1ECDB]/10 transition-colors cursor-pointer">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="flex items-center gap-2">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: config.accentColor }}>
+                    {/* Animated gradient border overlay */}
+                    <div
+                      className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
+                      style={{
+                        background: `linear-gradient(90deg, ${config.accentColor}00, ${config.accentColor}40, ${config.accentColor}00)`,
+                        backgroundSize: '200% 100%',
+                        animation: 'shimmer 3s infinite',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                    <CardHeader
+                      className="relative cursor-pointer"
+                    >
+
+                      <div className="flex items-center justify-between relative z-10">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
+                            style={{
+                              background: `linear-gradient(135deg, ${config.accentColor}20, ${config.accentColor}40)`,
+                              boxShadow: `0 4px 12px ${config.accentColor}30`,
+                            }}
+                          >
+                            <svg className="w-5 h-5 transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: config.accentColor }}>
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                             </svg>
-                            Monthly Breakdown
-                          </CardTitle>
-                          <CardDescription>Detailed performance by month ({kpis.length} months)</CardDescription>
+                          </div>
+                          <div>
+                            <CardTitle className="flex items-center gap-2 text-base font-bold">
+                              Monthly Breakdown
+                            </CardTitle>
+                            <CardDescription className="flex items-center gap-2 mt-1">
+                              <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold transition-all duration-300" style={{ backgroundColor: `${config.accentColor}20`, color: config.chartColorDark }}>
+                                {kpis.length} months
+                              </span>
+                            </CardDescription>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {/* Collapse Toggle */}
-                          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
-                            <span className="text-xs font-medium text-gray-600">
-                              {isBreakdownExpanded ? 'Hide' : 'Show'}
-                            </span>
+                        <div
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105"
+                          style={{
+                            background: `linear-gradient(135deg, ${config.accentColor}15, ${config.accentColor}25)`,
+                            border: `1px solid ${config.accentColor}40`,
+                            boxShadow: `0 4px 12px ${config.accentColor}20`,
+                          }}
+                        >
+                          <span className="text-xs font-bold tracking-wide" style={{ color: config.chartColorDark }}>
+                            {isBreakdownExpanded ? 'HIDE' : 'SHOW'}
+                          </span>
+                          <div className="relative w-5 h-5">
                             <svg
-                              className={`w-5 h-5 transition-transform duration-300 ${isBreakdownExpanded ? 'rotate-180' : ''}`}
+                              className={`absolute inset-0 transition-all duration-700 ${isBreakdownExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`}
                               fill="none"
                               viewBox="0 0 24 24"
                               stroke="currentColor"
                               style={{ color: config.accentColor }}
                             >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                             </svg>
                           </div>
                         </div>
@@ -1160,10 +1268,9 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
 
                   {/* Content - Collapsible */}
                   <div
-                    className="overflow-hidden transition-all duration-700 ease-in-out"
+                    className={`overflow-hidden rounded-b-lg ${isBreakdownExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}
                     style={{
-                      maxHeight: isBreakdownExpanded ? '800px' : '0px',
-                      opacity: isBreakdownExpanded ? 1 : 0,
+                      transition: 'max-height 1000ms cubic-bezier(0.4, 0, 0.2, 1), opacity 1000ms cubic-bezier(0.4, 0, 0.2, 1)',
                     }}
                   >
                       {/* Sort Options Bar */}

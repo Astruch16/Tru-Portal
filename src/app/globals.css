@@ -390,3 +390,52 @@ button:active {
 [class*="rounded-2xl"] ::-webkit-scrollbar-corner {
   background: transparent !important;
 }
+
+/* Yellow scrollbar for receipts modal dropdowns - must override modal defaults */
+/* Using highly specific selectors to override [class*="overflow-auto"] rules */
+.yellow-scrollbar.yellow-scrollbar.yellow-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: #eab308 transparent !important;
+  scrollbar-gutter: stable;
+}
+
+.yellow-scrollbar.yellow-scrollbar.yellow-scrollbar::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.yellow-scrollbar.yellow-scrollbar.yellow-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+  border-radius: 0.375rem !important;
+  margin: 0.25rem 0 !important;
+}
+
+.yellow-scrollbar.yellow-scrollbar.yellow-scrollbar::-webkit-scrollbar-track-piece {
+  background: transparent !important;
+  border-radius: 0.375rem !important;
+  margin: 0 !important;
+}
+
+.yellow-scrollbar.yellow-scrollbar.yellow-scrollbar::-webkit-scrollbar-thumb {
+  background: #eab308 !important;
+  border-radius: 0.375rem !important;
+  border: none !important;
+  transition: background 0.2s ease !important;
+}
+
+.yellow-scrollbar.yellow-scrollbar.yellow-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #ca8a04 !important;
+}
+
+.yellow-scrollbar.yellow-scrollbar.yellow-scrollbar::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
+.yellow-scrollbar.yellow-scrollbar.yellow-scrollbar::-webkit-scrollbar-button,
+.yellow-scrollbar.yellow-scrollbar.yellow-scrollbar::-webkit-scrollbar-button:start:decrement,
+.yellow-scrollbar.yellow-scrollbar.yellow-scrollbar::-webkit-scrollbar-button:end:increment {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
