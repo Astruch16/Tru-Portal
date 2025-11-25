@@ -78,6 +78,9 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
   const [clientPlan, setClientPlan] = useState<Plan | null>(null);
   const plan = serverPlan || clientPlan;
 
+  // User role for admin access
+  const [userRole, setUserRole] = useState<string | null>(null);
+
   const [activeChart, setActiveChart] = useState<{
     type: MetricType;
     title: string;
@@ -282,13 +285,14 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
     fetchPropertyKpi();
   }, [selectedPropertyId, orgId, month]);
 
-  // Fetch user name on mount
+  // Fetch user name and role on mount
   useEffect(() => {
-    const fetchUserName = async () => {
+    const fetchUserData = async () => {
       try {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
 
+        // Fetch profile for name
         const { data: profile } = await sb
           .from('profiles')
           .select('first_name, last_name')
@@ -298,13 +302,25 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
         if (profile) {
           setUserName(profile.first_name || 'there');
         }
+
+        // Fetch role from org_memberships
+        const { data: membership } = await sb
+          .from('org_memberships')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('org_id', orgId)
+          .single();
+
+        if (membership) {
+          setUserRole(membership.role);
+        }
       } catch (error) {
-        console.error('Error fetching user name:', error);
+        console.error('Error fetching user data:', error);
       }
     };
 
-    fetchUserName();
-  }, []);
+    fetchUserData();
+  }, [orgId]);
 
   // Fetch ledger entries and bookings on mount
   useEffect(() => {
@@ -645,6 +661,24 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
 
             {/* Toggle Navigation & Logout */}
             <div className="flex items-center gap-3">
+              {/* Admin Dashboard Button - Only for owners/managers */}
+              {(userRole === 'owner' || userRole === 'manager') && (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="border-border hover:bg-primary/5 hover:border-primary hover:scale-105 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 cursor-pointer"
+                >
+                  <Link href={`/admin/${orgId}`} className="flex items-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="mr-0.5">
+                      <path d="M12 4.5v15m7.5-7.5h-15" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Admin
+                  </Link>
+                </Button>
+              )}
               {/* Messages Button */}
               <Button
                 asChild
@@ -717,7 +751,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
                 size="sm"
                 variant="ghost"
                 onClick={() => setViewMode('monthly')}
-                className={`h-7 px-3 text-xs font-medium transition-all ${
+                className={`h-7 px-3 text-xs font-medium transition-all cursor-pointer ${
                   viewMode === 'monthly'
                     ? 'bg-[#9db896] text-white shadow-sm hover:bg-[#9db896]/90'
                     : 'text-foreground hover:bg-muted/50'
@@ -732,7 +766,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
                 size="sm"
                 variant="ghost"
                 onClick={() => setViewMode('annual')}
-                className={`h-7 px-3 text-xs font-medium transition-all ${
+                className={`h-7 px-3 text-xs font-medium transition-all cursor-pointer ${
                   viewMode === 'annual'
                     ? 'bg-[#9db896] text-white shadow-sm hover:bg-[#9db896]/90'
                     : 'text-foreground hover:bg-muted/50'
