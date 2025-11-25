@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Listbox, Transition } from '@headlessui/react';
 import Image from 'next/image';
 
 type Message = {
@@ -21,6 +22,13 @@ type Message = {
 type Property = {
   id: string;
   name: string;
+};
+
+type OrgUser = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
 };
 
 type UserProfile = {
@@ -96,6 +104,8 @@ export default function AdminMessagesPage({ params }: { params: Promise<{ orgid:
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [draftMessages, setDraftMessages] = useState<Record<string, string>>({});
+  const [allUsers, setAllUsers] = useState<OrgUser[]>([]);
+  const [showNewConversation, setShowNewConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -134,6 +144,15 @@ export default function AdminMessagesPage({ params }: { params: Promise<{ orgid:
             name: p.name
           }));
           setProperties(simpleProperties);
+        }
+
+        // Fetch all users in the org (for new conversation dropdown)
+        const usersResponse = await fetch(`/api/orgs/${orgId}/users`, { headers });
+        const usersData = await usersResponse.json();
+        if (usersResponse.ok && usersData.users) {
+          // Filter out the current admin user
+          const otherUsers = usersData.users.filter((u: any) => u.id !== user.id);
+          setAllUsers(otherUsers);
         }
       }
 
@@ -226,6 +245,7 @@ export default function AdminMessagesPage({ params }: { params: Promise<{ orgid:
       });
 
       if (response.ok) {
+        const messageData = await response.json();
         setNewMessage('');
         // Clear draft for this conversation
         const conversationKey = selectedConversation.userId;
@@ -234,6 +254,17 @@ export default function AdminMessagesPage({ params }: { params: Promise<{ orgid:
           delete newDrafts[conversationKey];
           return newDrafts;
         });
+
+        // If this is a new conversation (no existing messages), add the sent message locally
+        if (selectedConversation.messages.length === 0 && messageData.message) {
+          setSelectedConversation(prev => prev ? {
+            ...prev,
+            messages: [messageData.message],
+            lastMessage: messageData.message.message_text,
+            lastMessageTime: messageData.message.created_at
+          } : null);
+        }
+
         // Refresh conversations and keep the same conversation selected
         await fetchConversations(currentUserId, true);
       }
@@ -305,7 +336,40 @@ export default function AdminMessagesPage({ params }: { params: Promise<{ orgid:
     setSelectedConversation(convo);
     setSelectedPropertyId(null);
     setSearchQuery('');
+    setShowNewConversation(false);
   };
+
+  // Start a new conversation with a user
+  const startNewConversation = (user: OrgUser) => {
+    // Check if conversation already exists
+    const existingConvo = conversations.find(c => c.userId === user.id);
+    if (existingConvo) {
+      selectConversation(existingConvo);
+      return;
+    }
+
+    // Create a new empty conversation
+    const newConvo: Conversation = {
+      userId: user.id,
+      userName: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User',
+      userEmail: user.email || user.id,
+      lastMessage: '',
+      lastMessageTime: new Date().toISOString(),
+      unreadCount: 0,
+      messages: [],
+      properties: []
+    };
+
+    setSelectedConversation(newConvo);
+    setSelectedPropertyId(null);
+    setSearchQuery('');
+    setShowNewConversation(false);
+  };
+
+  // Get users who don't have a conversation yet
+  const usersWithoutConversation = allUsers.filter(
+    user => !conversations.some(c => c.userId === user.id)
+  );
 
   // Filter conversations by search query
   const filteredConversations = conversations.filter(convo =>
@@ -362,8 +426,64 @@ export default function AdminMessagesPage({ params }: { params: Promise<{ orgid:
       <div className="flex h-[calc(100vh-80px)]">
         {/* Conversations List */}
         <div className="w-96 border-r border-border bg-white overflow-y-auto">
-          {/* Search */}
-          <div className="p-4 border-b border-border sticky top-0 bg-white z-10">
+          {/* New Conversation Button & Search */}
+          <div className="p-4 border-b border-border sticky top-0 bg-white z-10 space-y-3">
+            {/* New Conversation Dropdown */}
+            <div className="relative">
+              <Listbox value={null} onChange={(user) => user && startNewConversation(user)}>
+                <Listbox.Button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  New Conversation
+                </Listbox.Button>
+                <Transition
+                  as={Fragment}
+                  leave="transition ease-in duration-100"
+                  leaveFrom="opacity-100"
+                  leaveTo="opacity-0"
+                >
+                  <Listbox.Options className="absolute left-0 right-0 mt-1 max-h-60 overflow-auto rounded-lg bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border dropdown-scrollbar dropdown-scrollbar dropdown-scrollbar">
+                    {allUsers.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                        No users available
+                      </div>
+                    ) : (
+                      allUsers.map((user) => {
+                        const hasConversation = conversations.some(c => c.userId === user.id);
+                        return (
+                          <Listbox.Option
+                            key={user.id}
+                            value={user}
+                            className={({ active }) =>
+                              `relative cursor-pointer select-none py-2.5 px-4 ${
+                                active ? 'bg-primary/10' : ''
+                              }`
+                            }
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-foreground">
+                                  {`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">{user.email}</p>
+                              </div>
+                              {hasConversation && (
+                                <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                                  Active
+                                </span>
+                              )}
+                            </div>
+                          </Listbox.Option>
+                        );
+                      })
+                    )}
+                  </Listbox.Options>
+                </Transition>
+              </Listbox>
+            </div>
+
+            {/* Search */}
             <div className="relative">
               <input
                 type="text"

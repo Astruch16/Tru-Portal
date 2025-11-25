@@ -15,8 +15,9 @@ function kindOf(s?: unknown) {
   return v === 'expense' ? 'expense' : 'revenue';
 }
 
-export async function GET(req: NextRequest, { params }: { params: { orgid?: string } }) {
-  const orgId = uuidOf(params?.orgid);
+export async function GET(req: NextRequest, { params }: { params: Promise<{ orgid?: string }> }) {
+  const { orgid } = await params;
+  const orgId = uuidOf(orgid);
   if (!orgId) return NextResponse.json({ error: 'Bad org id' }, { status: 400 });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -71,8 +72,9 @@ export async function GET(req: NextRequest, { params }: { params: { orgid?: stri
   return NextResponse.json({ ok: true, entries: data ?? [] });
 }
 
-export async function POST(req: NextRequest, { params }: { params: { orgid?: string } }) {
-  const orgId = uuidOf(params?.orgid);
+export async function POST(req: NextRequest, { params }: { params: Promise<{ orgid?: string }> }) {
+  const { orgid } = await params;
+  const orgId = uuidOf(orgid);
   if (!orgId) return NextResponse.json({ error: 'Bad org id' }, { status: 400 });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;

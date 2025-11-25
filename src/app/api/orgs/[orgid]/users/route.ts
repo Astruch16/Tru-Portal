@@ -33,6 +33,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<Param
       .select('user_id, role')
       .eq('org_id', orgId);
 
+    console.log('Users API - Memberships:', JSON.stringify(memberships, null, 2));
+    console.log('Users API - Memberships error:', membershipsError);
+    console.log('Users API - All roles in memberships:', memberships?.map((m: any) => ({ user_id: m.user_id, role: m.role })));
+
     if (membershipsError) return NextResponse.json({ error: membershipsError.message }, { status: 400 });
 
     // Get auth users for emails
@@ -48,12 +52,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<Param
       .in('id', userIds);
 
     // Get plans for each user
-    const { data: plans } = await admin
+    const { data: plans, error: plansError } = await admin
       .from('plans')
       .select('org_id, user_id, tier, percent')
       .eq('org_id', orgId)
       .in('user_id', userIds)
       .order('effective_date', { ascending: false });
+
+    console.log('Users API - Plans query for userIds:', userIds);
+    console.log('Users API - Plans result:', JSON.stringify(plans, null, 2));
+    console.log('Users API - Plans error:', plansError);
 
     // Get user properties
     const { data: userProperties } = await admin

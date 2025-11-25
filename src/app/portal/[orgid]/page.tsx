@@ -1,7 +1,11 @@
 // src/app/portal/[orgid]/page.tsx
 export const dynamic = 'force-dynamic';
 
+import { redirect } from 'next/navigation';
 import PortalClient from '@/components/portal/PortalClient';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ----- Types -----
 type KPI = {
@@ -82,9 +86,40 @@ export default async function PortalPage({
 }) {
   const { orgid } = await params;
   const search = await searchParams;
-  const orgId = orgid;
   const ym = (search?.month ?? new Date().toISOString().slice(0, 7)).slice(0, 7);
   const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+  // Validate orgId is a UUID - if not, redirect to user's actual org
+  if (!UUID_REGEX.test(orgid)) {
+    console.log('Portal page - Invalid org ID, looking up user org membership...');
+    try {
+      const { supabaseServer } = await import('@/lib/supabase/server');
+      const sb = await supabaseServer();
+      const { data: { user } } = await sb.auth.getUser();
+
+      if (user) {
+        // Look up user's org membership
+        const { data: membership } = await sb
+          .from('org_memberships')
+          .select('org_id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .single();
+
+        if (membership?.org_id) {
+          console.log('Portal page - Redirecting to org:', membership.org_id);
+          redirect(`/portal/${membership.org_id}${search?.month ? `?month=${search.month}` : ''}`);
+        }
+      }
+      // If no user or no membership, redirect to login
+      redirect('/login');
+    } catch (e) {
+      console.log('Portal page - Error looking up org:', e);
+      redirect('/login');
+    }
+  }
+
+  const orgId = orgid;
 
   // Plan - fetch with authentication to get user-specific plan
   let plan: Plan | null = null;

@@ -67,12 +67,16 @@ interface PortalClientProps {
   properties: Property[];
 }
 
-export default function PortalClient({ orgId, month, kpi, invoices, plan, properties }: PortalClientProps) {
-  console.log('PortalClient - Plan received:', plan);
+export default function PortalClient({ orgId, month, kpi, invoices, plan: serverPlan, properties }: PortalClientProps) {
+  console.log('PortalClient - Server plan received:', serverPlan);
   const pathname = usePathname();
   const router = useRouter();
   const isProfilePage = pathname?.includes('/profile');
   const sb = supabaseClient();
+
+  // Client-side plan state (fallback if server plan is null)
+  const [clientPlan, setClientPlan] = useState<Plan | null>(null);
+  const plan = serverPlan || clientPlan;
 
   const [activeChart, setActiveChart] = useState<{
     type: MetricType;
@@ -95,10 +99,10 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
 
   // Section collapse states
   const [isPerformanceExpanded, setIsPerformanceExpanded] = useState(true);
-  const [isInvoicesExpanded, setIsInvoicesExpanded] = useState(true);
-  const [isRevenueExpanded, setIsRevenueExpanded] = useState(true);
-  const [isBookingsExpanded, setIsBookingsExpanded] = useState(true);
-  const [isReviewsExpanded, setIsReviewsExpanded] = useState(true);
+  const [isInvoicesExpanded, setIsInvoicesExpanded] = useState(false);
+  const [isRevenueExpanded, setIsRevenueExpanded] = useState(false);
+  const [isBookingsExpanded, setIsBookingsExpanded] = useState(false);
+  const [isReviewsExpanded, setIsReviewsExpanded] = useState(false);
 
   // Unread messages count
   const [unreadCount, setUnreadCount] = useState(0);
@@ -309,6 +313,38 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
     fetchUnreadCount();
     fetchReviews();
   }, [orgId]);
+
+  // Fetch plan client-side if server didn't provide one
+  useEffect(() => {
+    if (serverPlan) {
+      console.log('PortalClient - Using server-provided plan:', serverPlan);
+      return;
+    }
+
+    const fetchPlan = async () => {
+      try {
+        console.log('PortalClient - Fetching plan client-side for org:', orgId);
+        const { data: { session } } = await sb.auth.getSession();
+        const headers: HeadersInit = { 'Content-Type': 'application/json' };
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+
+        const response = await fetch(`/api/orgs/${orgId}/plan`, { headers });
+        const data = await response.json();
+        console.log('PortalClient - Plan API response:', data);
+
+        if (data.ok && data.plan) {
+          console.log('PortalClient - Setting client plan:', data.plan);
+          setClientPlan(data.plan);
+        }
+      } catch (error) {
+        console.error('Error fetching plan client-side:', error);
+      }
+    };
+
+    fetchPlan();
+  }, [orgId, serverPlan]);
 
   // Fetch unread messages count
   const fetchUnreadCount = async () => {
@@ -728,7 +764,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                       </span>
                     </Listbox.Button>
                     <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-                      <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                      <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border dropdown-scrollbar dropdown-scrollbar dropdown-scrollbar">
                         <Listbox.Option
                           value="all"
                           className={({ active }) =>
@@ -786,7 +822,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                       </span>
                     </Listbox.Button>
                     <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-                      <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
+                      <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border dropdown-scrollbar dropdown-scrollbar dropdown-scrollbar">
                         {monthOptions.map((m) => (
                           <Listbox.Option
                             key={m.value}
@@ -872,8 +908,8 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
                   style={{
-                    background: 'linear-gradient(135deg, #9db89620, #9db89640)',
-                    boxShadow: '0 4px 12px #9db89630',
+                    background: 'linear-gradient(135deg, #374151, #1f2937)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
                   }}
                 >
                   <svg className="w-6 h-6 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -883,7 +919,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 <div>
                   <h2 className="text-xl font-bold text-foreground">Performance Metrics</h2>
                   {viewMode === 'annual' && (
-                    <Badge className="mt-1 bg-primary/20 text-primary font-semibold capitalize hover:bg-primary/30 border-primary/30">
+                    <Badge className="mt-1 bg-primary/20 text-foreground font-semibold capitalize hover:bg-primary/30 border-primary/30">
                       Year to Date {new Date().getFullYear()}
                     </Badge>
                   )}
@@ -897,7 +933,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                   boxShadow: '0 4px 12px #9db89620',
                 }}
               >
-                <span className="text-xs font-bold tracking-wide text-white">
+                <span className="text-xs font-bold tracking-wide text-foreground">
                   {isPerformanceExpanded ? 'HIDE' : 'SHOW'}
                 </span>
                 <div className="relative w-5 h-5">
@@ -1083,8 +1119,8 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
                 style={{
-                  background: 'linear-gradient(135deg, #9db89620, #9db89640)',
-                  boxShadow: '0 4px 12px #9db89630',
+                  background: 'linear-gradient(135deg, #374151, #1f2937)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
                 }}
               >
                 <svg className="w-6 h-6 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1095,7 +1131,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 <h2 className="text-xl font-bold text-foreground">Bookings</h2>
                 {bookings.length > 0 && (
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary">
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-foreground">
                       {bookings.length} total
                     </span>
                   </div>
@@ -1110,7 +1146,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 boxShadow: '0 4px 12px #9db89620',
               }}
             >
-              <span className="text-xs font-bold tracking-wide text-white">
+              <span className="text-xs font-bold tracking-wide text-foreground">
                 {isBookingsExpanded ? 'HIDE' : 'SHOW'}
               </span>
               <div className="relative w-5 h-5">
@@ -1366,8 +1402,8 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
                   style={{
-                    background: 'linear-gradient(135deg, #9db89620, #9db89640)',
-                    boxShadow: '0 4px 12px #9db89630',
+                    background: 'linear-gradient(135deg, #374151, #1f2937)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
                   }}
                 >
                   <svg className="w-6 h-6 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1384,7 +1420,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                   boxShadow: '0 4px 12px #9db89620',
                 }}
               >
-                <span className="text-xs font-bold tracking-wide text-white">
+                <span className="text-xs font-bold tracking-wide text-foreground">
                   {isReviewsExpanded ? 'HIDE' : 'SHOW'}
                 </span>
                 <div className="relative w-5 h-5">
@@ -1602,8 +1638,8 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
                 style={{
-                  background: 'linear-gradient(135deg, #9db89620, #9db89640)',
-                  boxShadow: '0 4px 12px #9db89630',
+                  background: 'linear-gradient(135deg, #374151, #1f2937)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
                 }}
               >
                 <svg className="w-6 h-6 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1614,7 +1650,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 <h2 className="text-xl font-bold text-foreground">Revenue & Expenses</h2>
                 {ledgerEntries.length > 0 && (
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary">
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-foreground">
                       {ledgerEntries.length} entries
                     </span>
                   </div>
@@ -1629,7 +1665,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 boxShadow: '0 4px 12px #9db89620',
               }}
             >
-              <span className="text-xs font-bold tracking-wide text-white">
+              <span className="text-xs font-bold tracking-wide text-foreground">
                 {isRevenueExpanded ? 'HIDE' : 'SHOW'}
               </span>
               <div className="relative w-5 h-5">
@@ -1763,14 +1799,15 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                       >
                         <div className="flex items-center gap-2">
                           <svg
-                            className={`w-4 h-4 text-primary transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                            className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
+                            style={{ color: '#9db896' }}
                           >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
-                          <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="w-4 h-4 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                           <h4 className="text-sm font-semibold text-foreground">
@@ -1878,8 +1915,8 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
                 style={{
-                  background: 'linear-gradient(135deg, #9db89620, #9db89640)',
-                  boxShadow: '0 4px 12px #9db89630',
+                  background: 'linear-gradient(135deg, #374151, #1f2937)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
                 }}
               >
                 <svg className="w-6 h-6 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1890,7 +1927,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 <h2 className="text-xl font-bold text-foreground">Invoices</h2>
                 {invoices.length > 0 && (
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary">
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-foreground">
                       {invoices.length} total
                     </span>
                   </div>
@@ -1905,7 +1942,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan, proper
                 boxShadow: '0 4px 12px #9db89620',
               }}
             >
-              <span className="text-xs font-bold tracking-wide text-white">
+              <span className="text-xs font-bold tracking-wide text-foreground">
                 {isInvoicesExpanded ? 'HIDE' : 'SHOW'}
               </span>
               <div className="relative w-5 h-5">

@@ -1237,26 +1237,87 @@ export default function AdminPage() {
               <div>
                 <button
                   onClick={() => setIsAllUsersExpanded(!isAllUsersExpanded)}
-                  className="w-full flex items-center justify-between mb-3 hover:bg-[#E1ECDB]/10 p-2 rounded-lg transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between mb-3 p-4 rounded-xl transition-all duration-500 cursor-pointer group relative overflow-hidden backdrop-blur-sm"
+                  style={{
+                    background: 'linear-gradient(135deg, #9db89605 0%, transparent 100%)',
+                    border: '2px solid #9db89620',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #9db89615 0%, #9db89605 100%)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 16px -4px #9db89630';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #9db89605 0%, transparent 100%)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 >
-                  <h3 className="text-sm font-medium flex items-center gap-2">
-                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                    All Users
-                    <Badge variant="outline" className="text-xs">
-                      {users.length} total
-                    </Badge>
-                  </h3>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
-                    <span className="text-xs font-medium text-gray-600">
-                      {isAllUsersExpanded ? 'Hide' : 'Show'}
+                  {/* Animated shimmer overlay */}
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{
+                      background: 'linear-gradient(90deg, #9db89600, #9db89640, #9db89600)',
+                      backgroundSize: '200% 100%',
+                      animation: 'shimmer 3s infinite',
+                      pointerEvents: 'none',
+                    }}
+                  />
+
+                  <div className="flex items-center gap-3 relative z-10">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
+                      style={{
+                        background: 'linear-gradient(135deg, #9db89620, #9db89640)',
+                        boxShadow: '0 4px 12px #9db89630',
+                      }}
+                    >
+                      <svg className="w-5 h-5 text-primary transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold">All Users</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary">
+                          {users.length} total
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105 relative z-10"
+                    style={{
+                      background: 'linear-gradient(135deg, #9db89615, #9db89625)',
+                      border: '1px solid #9db89640',
+                      boxShadow: '0 4px 12px #9db89620',
+                    }}
+                  >
+                    <span className="text-xs font-bold tracking-wide text-primary">
+                      {isAllUsersExpanded ? 'HIDE' : 'SHOW'}
                     </span>
-                    <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isAllUsersExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <div className="relative w-5 h-5">
+                      <svg
+                        className={`absolute inset-0 transition-all duration-700 ${isAllUsersExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        style={{ color: '#9db896' }}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </div>
                 </button>
+
+                {/* Add shimmer keyframe animation */}
+                <style jsx>{`
+                  @keyframes shimmer {
+                    0% { background-position: -200% 0; }
+                    100% { background-position: 200% 0; }
+                  }
+                `}</style>
 
                 <div
                   className="overflow-hidden transition-all duration-700 ease-in-out"
@@ -1446,24 +1507,74 @@ export default function AdminPage() {
               <div>
                 <button
                   onClick={() => setIsAllPropertiesExpanded(!isAllPropertiesExpanded)}
-                  className="w-full flex items-center justify-between mb-3 hover:bg-[#E1ECDB]/10 p-2 rounded-lg transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between mb-3 p-4 rounded-xl transition-all duration-500 cursor-pointer group relative overflow-hidden backdrop-blur-sm"
+                  style={{
+                    background: 'linear-gradient(135deg, #9db89605 0%, transparent 100%)',
+                    border: '2px solid #9db89620',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #9db89615 0%, #9db89605 100%)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 16px -4px #9db89630';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #9db89605 0%, transparent 100%)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 >
-                  <h3 className="text-sm font-medium flex items-center gap-2">
-                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    All Properties
-                    <Badge variant="outline" className="text-xs">
-                      {properties.length} total
-                    </Badge>
-                  </h3>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
-                    <span className="text-xs font-medium text-gray-600">
-                      {isAllPropertiesExpanded ? 'Hide' : 'Show'}
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{
+                      background: 'linear-gradient(90deg, #9db89600, #9db89640, #9db89600)',
+                      backgroundSize: '200% 100%',
+                      animation: 'shimmer 3s infinite',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  <div className="flex items-center gap-3 relative z-10">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
+                      style={{
+                        background: 'linear-gradient(135deg, #9db89620, #9db89640)',
+                        boxShadow: '0 4px 12px #9db89630',
+                      }}
+                    >
+                      <svg className="w-5 h-5 text-primary transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold">All Properties</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary">
+                          {properties.length} total
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105 relative z-10"
+                    style={{
+                      background: 'linear-gradient(135deg, #9db89615, #9db89625)',
+                      border: '1px solid #9db89640',
+                      boxShadow: '0 4px 12px #9db89620',
+                    }}
+                  >
+                    <span className="text-xs font-bold tracking-wide text-primary">
+                      {isAllPropertiesExpanded ? 'HIDE' : 'SHOW'}
                     </span>
-                    <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isAllPropertiesExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <div className="relative w-5 h-5">
+                      <svg
+                        className={`absolute inset-0 transition-all duration-700 ${isAllPropertiesExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        style={{ color: '#9db896' }}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </div>
                 </button>
 
@@ -1850,24 +1961,74 @@ export default function AdminPage() {
               <div>
                 <button
                   onClick={() => setIsAllBookingsExpanded(!isAllBookingsExpanded)}
-                  className="w-full flex items-center justify-between mb-3 hover:bg-[#E1ECDB]/10 p-2 rounded-lg transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between mb-3 p-4 rounded-xl transition-all duration-500 cursor-pointer group relative overflow-hidden backdrop-blur-sm"
+                  style={{
+                    background: 'linear-gradient(135deg, #9db89605 0%, transparent 100%)',
+                    border: '2px solid #9db89620',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #9db89615 0%, #9db89605 100%)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 16px -4px #9db89630';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #9db89605 0%, transparent 100%)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 >
-                  <h3 className="text-sm font-medium flex items-center gap-2">
-                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    All Bookings
-                    <Badge variant="outline" className="text-xs">
-                      {bookings.length} total
-                    </Badge>
-                  </h3>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
-                    <span className="text-xs font-medium text-gray-600">
-                      {isAllBookingsExpanded ? 'Hide' : 'Show'}
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{
+                      background: 'linear-gradient(90deg, #9db89600, #9db89640, #9db89600)',
+                      backgroundSize: '200% 100%',
+                      animation: 'shimmer 3s infinite',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  <div className="flex items-center gap-3 relative z-10">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
+                      style={{
+                        background: 'linear-gradient(135deg, #9db89620, #9db89640)',
+                        boxShadow: '0 4px 12px #9db89630',
+                      }}
+                    >
+                      <svg className="w-5 h-5 text-primary transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold">All Bookings</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary">
+                          {bookings.length} total
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105 relative z-10"
+                    style={{
+                      background: 'linear-gradient(135deg, #9db89615, #9db89625)',
+                      border: '1px solid #9db89640',
+                      boxShadow: '0 4px 12px #9db89620',
+                    }}
+                  >
+                    <span className="text-xs font-bold tracking-wide text-primary">
+                      {isAllBookingsExpanded ? 'HIDE' : 'SHOW'}
                     </span>
-                    <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isAllBookingsExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <div className="relative w-5 h-5">
+                      <svg
+                        className={`absolute inset-0 transition-all duration-700 ${isAllBookingsExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        style={{ color: '#9db896' }}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </div>
                 </button>
 
@@ -2283,24 +2444,74 @@ export default function AdminPage() {
               <div>
                 <button
                   onClick={() => setIsAllEntriesExpanded(!isAllEntriesExpanded)}
-                  className="w-full flex items-center justify-between mb-3 hover:bg-[#E1ECDB]/10 p-2 rounded-lg transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between mb-3 p-4 rounded-xl transition-all duration-500 cursor-pointer group relative overflow-hidden backdrop-blur-sm"
+                  style={{
+                    background: 'linear-gradient(135deg, #9db89605 0%, transparent 100%)',
+                    border: '2px solid #9db89620',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #9db89615 0%, #9db89605 100%)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 16px -4px #9db89630';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #9db89605 0%, transparent 100%)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 >
-                  <h3 className="text-sm font-medium flex items-center gap-2">
-                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    All Entries
-                    <Badge variant="outline" className="text-xs">
-                      {ledgerEntries.length} total
-                    </Badge>
-                  </h3>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
-                    <span className="text-xs font-medium text-gray-600">
-                      {isAllEntriesExpanded ? 'Hide' : 'Show'}
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{
+                      background: 'linear-gradient(90deg, #9db89600, #9db89640, #9db89600)',
+                      backgroundSize: '200% 100%',
+                      animation: 'shimmer 3s infinite',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  <div className="flex items-center gap-3 relative z-10">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
+                      style={{
+                        background: 'linear-gradient(135deg, #9db89620, #9db89640)',
+                        boxShadow: '0 4px 12px #9db89630',
+                      }}
+                    >
+                      <svg className="w-5 h-5 text-primary transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold">All Entries</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary">
+                          {ledgerEntries.length} total
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105 relative z-10"
+                    style={{
+                      background: 'linear-gradient(135deg, #9db89615, #9db89625)',
+                      border: '1px solid #9db89640',
+                      boxShadow: '0 4px 12px #9db89620',
+                    }}
+                  >
+                    <span className="text-xs font-bold tracking-wide text-primary">
+                      {isAllEntriesExpanded ? 'HIDE' : 'SHOW'}
                     </span>
-                    <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isAllEntriesExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <div className="relative w-5 h-5">
+                      <svg
+                        className={`absolute inset-0 transition-all duration-700 ${isAllEntriesExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        style={{ color: '#9db896' }}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </div>
                 </button>
 
@@ -3016,24 +3227,74 @@ export default function AdminPage() {
               <div>
                 <button
                   onClick={() => setIsAllInvoicesExpanded(!isAllInvoicesExpanded)}
-                  className="w-full flex items-center justify-between mb-3 hover:bg-[#E1ECDB]/10 p-2 rounded-lg transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between mb-3 p-4 rounded-xl transition-all duration-500 cursor-pointer group relative overflow-hidden backdrop-blur-sm"
+                  style={{
+                    background: 'linear-gradient(135deg, #9db89605 0%, transparent 100%)',
+                    border: '2px solid #9db89620',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #9db89615 0%, #9db89605 100%)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 16px -4px #9db89630';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #9db89605 0%, transparent 100%)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 >
-                  <h3 className="text-sm font-medium flex items-center gap-2">
-                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    All Invoices
-                    <Badge variant="outline" className="text-xs">
-                      {invoices.length} total
-                    </Badge>
-                  </h3>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E1ECDB]/30 border border-[#E1ECDB]">
-                    <span className="text-xs font-medium text-gray-600">
-                      {isAllInvoicesExpanded ? 'Hide' : 'Show'}
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{
+                      background: 'linear-gradient(90deg, #9db89600, #9db89640, #9db89600)',
+                      backgroundSize: '200% 100%',
+                      animation: 'shimmer 3s infinite',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  <div className="flex items-center gap-3 relative z-10">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
+                      style={{
+                        background: 'linear-gradient(135deg, #9db89620, #9db89640)',
+                        boxShadow: '0 4px 12px #9db89630',
+                      }}
+                    >
+                      <svg className="w-5 h-5 text-primary transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold">All Invoices</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary">
+                          {invoices.length} total
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105 relative z-10"
+                    style={{
+                      background: 'linear-gradient(135deg, #9db89615, #9db89625)',
+                      border: '1px solid #9db89640',
+                      boxShadow: '0 4px 12px #9db89620',
+                    }}
+                  >
+                    <span className="text-xs font-bold tracking-wide text-primary">
+                      {isAllInvoicesExpanded ? 'HIDE' : 'SHOW'}
                     </span>
-                    <svg className={`w-5 h-5 text-[#9db896] transition-transform duration-300 ${isAllInvoicesExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <div className="relative w-5 h-5">
+                      <svg
+                        className={`absolute inset-0 transition-all duration-700 ${isAllInvoicesExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        style={{ color: '#9db896' }}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </div>
                 </button>
 

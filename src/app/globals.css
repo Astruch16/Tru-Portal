@@ -439,3 +439,50 @@ button:active {
   height: 0 !important;
   background: transparent !important;
 }
+
+/* Dropdown Listbox scrollbar - seamless rounded corners */
+.dropdown-scrollbar.dropdown-scrollbar.dropdown-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(157, 184, 150, 0.4) transparent !important;
+}
+
+.dropdown-scrollbar.dropdown-scrollbar.dropdown-scrollbar::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+.dropdown-scrollbar.dropdown-scrollbar.dropdown-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+  border-radius: 0 0.375rem 0.375rem 0 !important;
+  margin: 0.25rem 0 !important;
+}
+
+.dropdown-scrollbar.dropdown-scrollbar.dropdown-scrollbar::-webkit-scrollbar-track-piece {
+  background: transparent !important;
+  border-radius: 0 0.375rem 0.375rem 0 !important;
+}
+
+.dropdown-scrollbar.dropdown-scrollbar.dropdown-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(157, 184, 150, 0.4) !important;
+  border-radius: 0.375rem !important;
+  border: none !important;
+  transition: background 0.2s ease !important;
+}
+
+.dropdown-scrollbar.dropdown-scrollbar.dropdown-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(157, 184, 150, 0.6) !important;
+}
+
+.dropdown-scrollbar.dropdown-scrollbar.dropdown-scrollbar::-webkit-scrollbar-corner {
+  background: transparent !important;
+  border-radius: 0 0 0.375rem 0 !important;
+}
+
+.dropdown-scrollbar.dropdown-scrollbar.dropdown-scrollbar::-webkit-scrollbar-button,
+.dropdown-scrollbar.dropdown-scrollbar.dropdown-scrollbar::-webkit-scrollbar-button:start:decrement,
+.dropdown-scrollbar.dropdown-scrollbar.dropdown-scrollbar::-webkit-scrollbar-button:end:increment {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}

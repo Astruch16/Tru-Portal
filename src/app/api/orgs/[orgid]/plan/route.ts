@@ -54,6 +54,12 @@ export async function GET(req: NextRequest, ctx: { params: Promise<Params> }) {
 
     console.log('Plan API - orgId:', orgId, 'userId:', userId);
 
+    // First, let's see ALL plans for this org to debug
+    const allPlans = await admin.from('plans')
+      .select('org_id, user_id, tier, percent, effective_date')
+      .eq('org_id', orgId);
+    console.log('Plan API - All plans for org:', JSON.stringify(allPlans.data, null, 2));
+
     // Get the most recent plan for this user and org
     let planQuery = admin.from('plans')
       .select('tier, percent')

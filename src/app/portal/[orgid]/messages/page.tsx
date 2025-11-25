@@ -80,6 +80,7 @@ export default function MemberMessagesPage({ params }: { params: Promise<{ orgid
   const [sending, setSending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [adminId, setAdminId] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -106,29 +107,63 @@ export default function MemberMessagesPage({ params }: { params: Promise<{ orgid
       }
       setCurrentUserId(user.id);
 
-      // Get admin user ID (org owner)
-      const { data: membership } = await sb
-        .from('org_memberships')
-        .select('user_id')
-        .eq('org_id', orgId)
-        .eq('role', 'owner')
-        .single();
+      // Get session for API calls
+      const { data: { session } } = await sb.auth.getSession();
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      // Get admin user ID (org owner) via API
+      const usersResponse = await fetch(`/api/orgs/${orgId}/users`, { headers });
+      const usersData = await usersResponse.json();
 
       console.log('Member portal - Current user ID:', user.id);
-      console.log('Member portal - Admin (owner) ID:', membership?.user_id);
+      console.log('Member portal - Users API status:', usersResponse.status);
+      console.log('Member portal - Users API response:', usersData);
+      console.log('Member portal - Users list:', usersData.users);
 
-      if (membership) {
-        setAdminId(membership.user_id);
+      if (usersData.ok && usersData.users) {
+        // Log all user roles for debugging
+        usersData.users.forEach((u: any) => {
+          console.log(`Member portal - User: ${u.id} (${u.first_name} ${u.last_name}) - Role: "${u.role}"`);
+        });
+
+        // Look for owner, admin, or manager role
+        const owner = usersData.users.find((u: any) =>
+          u.role === 'owner' || u.role === 'admin' || u.role === 'manager'
+        );
+        console.log('Member portal - Found owner/admin/manager:', owner);
+
+        // If no owner/admin/manager found, try to find any user that's NOT the current user
+        // This handles legacy setups where roles might not be properly set
+        const fallbackAdmin = !owner
+          ? usersData.users.find((u: any) => u.id !== user.id)
+          : null;
+
+        if (fallbackAdmin) {
+          console.log('Member portal - Using fallback admin (no owner role found):', fallbackAdmin);
+        }
+
+        const adminUser = owner || fallbackAdmin;
+
+        if (adminUser && adminUser.id !== user.id) {
+          // Only set adminId if the current user is NOT the owner/admin
+          console.log('Member portal - Setting adminId to:', adminUser.id);
+          setAdminId(adminUser.id);
+        } else if (adminUser && adminUser.id === user.id) {
+          // Current user IS the owner/admin - they should use admin portal for messaging
+          setIsOwner(true);
+          console.log('Member portal - Current user is the owner/admin, cannot message self');
+        } else {
+          console.log('Member portal - No other users found in org to message!');
+        }
+      } else {
+        console.log('Member portal - Users API failed or returned no users:', usersData);
       }
 
       // Fetch properties assigned to this user using the API
-      const { data: { session } } = await sb.auth.getSession();
       if (session) {
-        const headers: HeadersInit = { 'Content-Type': 'application/json' };
-        if (session?.access_token) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
-        }
-
         const response = await fetch(`/api/orgs/${orgId}/properties/list`, { headers });
         const data = await response.json();
 
@@ -207,7 +242,11 @@ export default function MemberMessagesPage({ params }: { params: Promise<{ orgid
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !adminId || !currentUserId) return;
+    console.log('sendMessage called - adminId:', adminId, 'currentUserId:', currentUserId, 'message:', newMessage.trim());
+    if (!newMessage.trim() || !adminId || !currentUserId) {
+      console.log('sendMessage early return - missing:', !newMessage.trim() ? 'message' : !adminId ? 'adminId' : 'currentUserId');
+      return;
+    }
 
     setSending(true);
     try {
@@ -563,6 +602,28 @@ export default function MemberMessagesPage({ params }: { params: Promise<{ orgid
 
           {/* Message Input */}
           <div className="border-t bg-gray-50">
+            {!adminId && !loading && (
+              <div className="px-4 pt-3 pb-2">
+                {isOwner ? (
+                  <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2 border border-blue-200">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M12 16v-4M12 8h.01" />
+                    </svg>
+                    <span>You are the admin. Use the <button onClick={() => router.push(`/admin/${orgId}/messages`)} className="underline font-medium hover:text-blue-800">Admin Portal</button> to manage conversations with members.</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>Unable to connect to admin. Please refresh the page or contact support.</span>
+                  </div>
+                )}
+              </div>
+            )}
             {selectedPropertyId && (
               <div className="px-4 pt-3 pb-2">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground bg-white rounded-lg px-3 py-2 border border-border">
@@ -590,7 +651,7 @@ export default function MemberMessagesPage({ params }: { params: Promise<{ orgid
                 />
                 <Button
                   onClick={sendMessage}
-                  disabled={sending || !newMessage.trim()}
+                  disabled={sending || !newMessage.trim() || !adminId}
                   className="px-6 py-3 shadow-sm h-[46px]"
                 >
                   {sending ? (
