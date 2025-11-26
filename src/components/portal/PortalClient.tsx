@@ -122,6 +122,9 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
   const [reviews, setReviews] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
 
+  // Mobile menu state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   // Generate month options (January to December of current year)
   const generateMonthOptions = () => {
     const months = [];
@@ -638,18 +641,18 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
       {/* Header */}
       <div className="bg-white border-b border-border shadow-sm relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4 animate-fade-in">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 animate-fade-in">
               {/* TruHost Logo */}
               <Image
                 src="/truhost-logo.png"
                 alt="TruHost Logo"
                 width={380}
                 height={106}
-                className="h-20 w-auto object-contain transition-transform hover:scale-105"
+                className="h-12 sm:h-16 md:h-20 w-auto object-contain transition-transform hover:scale-105"
                 priority
               />
-              <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2">
                 <p className="text-sm text-muted-foreground">Member Portal</p>
                 {/* Pulsing green dot */}
                 <div className="relative flex items-center justify-center">
@@ -659,8 +662,25 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
               </div>
             </div>
 
-            {/* Toggle Navigation & Logout */}
-            <div className="flex items-center gap-3">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? (
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-3">
               {/* Admin Dashboard Button - Only for owners/managers */}
               {(userRole === 'owner' || userRole === 'manager') && (
                 <Button
@@ -742,50 +762,143 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
             </div>
           </div>
 
+          {/* Mobile Menu */}
+          <div className={`md:hidden overflow-hidden transition-all duration-300 ${isMobileMenuOpen ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+            <div className="flex flex-col gap-2 pb-4">
+              {/* Dashboard / Profile Toggle */}
+              <div className="flex items-center gap-2 bg-muted/30 rounded-lg p-1 border border-border">
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className={`flex-1 transition-all duration-300 ${!isProfilePage ? 'bg-primary text-foreground font-medium shadow-sm hover:bg-primary/80' : 'text-foreground hover:bg-muted/50'}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Link href={`/portal/${orgId}`} className="flex items-center justify-center gap-2" prefetch={true}>
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    Dashboard
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className={`flex-1 transition-all duration-300 ${isProfilePage ? 'bg-primary text-foreground font-medium shadow-sm hover:bg-primary/80' : 'text-foreground hover:bg-muted/50'}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Link href={`/portal/${orgId}/profile`} className="flex items-center justify-center gap-2" prefetch={true}>
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Profile
+                  </Link>
+                </Button>
+              </div>
+
+              {/* Messages Button */}
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="relative w-full border-border hover:bg-primary/5 hover:border-primary transition-all duration-300"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Link href={`/portal/${orgId}/messages`} className="flex items-center justify-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  Messages
+                  {unreadCount > 0 && (
+                    <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+              </Button>
+
+              {/* Admin Button - Only for owners/managers */}
+              {(userRole === 'owner' || userRole === 'manager') && (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-border hover:bg-primary/5 hover:border-primary transition-all duration-300"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Link href={`/admin/${orgId}`} className="flex items-center justify-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Admin Dashboard
+                  </Link>
+                </Button>
+              )}
+
+              {/* Logout Button */}
+              <Button
+                onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
+                variant="outline"
+                size="sm"
+                className="w-full border-border hover:border-destructive hover:text-destructive hover:bg-destructive/5 transition-all duration-300"
+              >
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mr-2">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Logout
+              </Button>
+            </div>
+          </div>
+
           <Separator className="mt-1 mb-4 bg-border" />
 
-          <div className="flex flex-wrap items-center gap-4 text-sm animate-slide-in pb-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm animate-slide-in pb-4">
             {/* View Mode Toggle */}
-            <div className="flex items-center gap-2 bg-muted/30 rounded-lg p-1 border border-[#E1ECDB]">
+            <div className="flex items-center gap-1 sm:gap-2 bg-muted/30 rounded-lg p-1 border border-[#E1ECDB]">
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => setViewMode('monthly')}
-                className={`h-7 px-3 text-xs font-medium transition-all cursor-pointer ${
+                className={`h-7 px-2 sm:px-3 text-xs font-medium transition-all cursor-pointer ${
                   viewMode === 'monthly'
                     ? 'bg-[#9db896] text-white shadow-sm hover:bg-[#9db896]/90'
                     : 'text-foreground hover:bg-muted/50'
                 }`}
               >
-                <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3.5 h-3.5 sm:mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                Monthly
+                <span className="hidden sm:inline">Monthly</span>
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => setViewMode('annual')}
-                className={`h-7 px-3 text-xs font-medium transition-all cursor-pointer ${
+                className={`h-7 px-2 sm:px-3 text-xs font-medium transition-all cursor-pointer ${
                   viewMode === 'annual'
                     ? 'bg-[#9db896] text-white shadow-sm hover:bg-[#9db896]/90'
                     : 'text-foreground hover:bg-muted/50'
                 }`}
               >
-                <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3.5 h-3.5 sm:mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
-                Year to Date
+                <span className="hidden sm:inline">Year to Date</span>
               </Button>
+              {viewMode === 'annual' && loadingAnnual && (
+                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full ml-1"></div>
+              )}
             </div>
 
             {/* Property Selector */}
             {properties.length > 0 && (
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Property:</span>
+                <span className="text-muted-foreground hidden sm:inline">Property:</span>
                 <Listbox value={selectedPropertyId || 'all'} onChange={handlePropertyChange} disabled={loadingPropertyKpi}>
                   <div className="relative">
-                    <Listbox.Button className="relative w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    <Listbox.Button className="relative w-32 sm:w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                       <span className="block truncate text-sm font-medium">
                         {selectedPropertyId
                           ? properties.find(p => p.id === selectedPropertyId)?.name || 'All Properties'
@@ -798,7 +911,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
                       </span>
                     </Listbox.Button>
                     <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-                      <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border dropdown-scrollbar dropdown-scrollbar dropdown-scrollbar">
+                      <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-32 sm:w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border dropdown-scrollbar">
                         <Listbox.Option
                           value="all"
                           className={({ active }) =>
@@ -842,10 +955,10 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
 
             {viewMode === 'monthly' && (
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Month:</span>
+                <span className="text-muted-foreground hidden sm:inline">Month:</span>
                 <Listbox value={month} onChange={handleMonthChange}>
                   <div className="relative">
-                    <Listbox.Button className="relative w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                    <Listbox.Button className="relative w-32 sm:w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
                       <span className="block truncate text-sm font-semibold">
                         {monthOptions.find(m => m.value === month)?.label || month}
                       </span>
@@ -856,7 +969,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
                       </span>
                     </Listbox.Button>
                     <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-                      <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border dropdown-scrollbar dropdown-scrollbar dropdown-scrollbar">
+                      <Listbox.Options className="absolute right-0 mt-1 max-h-60 w-32 sm:w-44 overflow-auto rounded-md bg-background py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border dropdown-scrollbar">
                         {monthOptions.map((m) => (
                           <Listbox.Option
                             key={m.value}
@@ -880,12 +993,6 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
                 </Listbox>
               </div>
             )}
-            {viewMode === 'annual' && loadingAnnual && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                <span>Loading year-to-date data...</span>
-              </div>
-            )}
             {plan && (
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Plan:</span>
@@ -898,11 +1005,11 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Personalized Greeting */}
         {userName && (
-          <div className="mb-6 animate-fade-in">
-            <h2 className="text-3xl font-bold text-foreground">
+          <div className="mb-4 sm:mb-6 animate-fade-in">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">
               Hi {userName},
             </h2>
           </div>
@@ -938,20 +1045,20 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
                   pointerEvents: 'none',
                 }}
               />
-              <div className="flex items-center gap-3 relative z-10">
+              <div className="flex items-center gap-2 sm:gap-3 relative z-10">
                 <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
+                  className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12 flex-shrink-0"
                   style={{
                     background: 'linear-gradient(135deg, #374151, #1f2937)',
                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
                   }}
                 >
-                  <svg className="w-6 h-6 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 sm:w-6 sm:h-6 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-foreground">Performance Metrics</h2>
+                  <h2 className="text-base sm:text-xl font-bold text-foreground">Performance Metrics</h2>
                   {viewMode === 'annual' && (
                     <Badge className="mt-1 bg-primary/20 text-foreground font-semibold capitalize hover:bg-primary/30 border-primary/30">
                       Year to Date {new Date().getFullYear()}
@@ -960,17 +1067,17 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
                 </div>
               </div>
               <div
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105 relative z-10"
+                className="flex items-center gap-1 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105 relative z-10"
                 style={{
                   background: 'linear-gradient(135deg, #9db89615, #9db89625)',
                   border: '1px solid #9db89640',
                   boxShadow: '0 4px 12px #9db89620',
                 }}
               >
-                <span className="text-xs font-bold tracking-wide text-foreground">
+                <span className="text-[10px] sm:text-xs font-bold tracking-wide text-foreground">
                   {isPerformanceExpanded ? 'HIDE' : 'SHOW'}
                 </span>
-                <div className="relative w-5 h-5">
+                <div className="relative w-4 h-4 sm:w-5 sm:h-5">
                   <svg
                     className={`absolute inset-0 transition-all duration-700 ${isPerformanceExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`}
                     fill="none"
@@ -999,7 +1106,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
                   </Badge>
                 </div>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-2 px-4 pt-4 pb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mt-2 px-2 sm:px-4 pt-4 pb-8">
                 {metricCards.map((card, index) => (
               <div
                 key={card.label}
@@ -1668,20 +1775,20 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
                 pointerEvents: 'none',
               }}
             />
-            <div className="flex items-center gap-3 relative z-10">
+            <div className="flex items-center gap-2 sm:gap-3 relative z-10">
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12"
+                className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12 flex-shrink-0"
                 style={{
                   background: 'linear-gradient(135deg, #374151, #1f2937)',
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
                 }}
               >
-                <svg className="w-6 h-6 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-white transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div>
-                <h2 className="text-xl font-bold text-foreground">Revenue & Expenses</h2>
+                <h2 className="text-base sm:text-xl font-bold text-foreground">Revenue & Expenses</h2>
                 {ledgerEntries.length > 0 && (
                   <div className="flex items-center gap-2 mt-1">
                     <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-foreground">
@@ -1692,17 +1799,17 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
               </div>
             </div>
             <div
-              className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105 relative z-10"
+              className="flex items-center gap-1 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl backdrop-blur-md transition-all duration-500 group-hover:scale-105 relative z-10"
               style={{
                 background: 'linear-gradient(135deg, #9db89615, #9db89625)',
                 border: '1px solid #9db89640',
                 boxShadow: '0 4px 12px #9db89620',
               }}
             >
-              <span className="text-xs font-bold tracking-wide text-foreground">
+              <span className="text-[10px] sm:text-xs font-bold tracking-wide text-foreground">
                 {isRevenueExpanded ? 'HIDE' : 'SHOW'}
               </span>
-              <div className="relative w-5 h-5">
+              <div className="relative w-4 h-4 sm:w-5 sm:h-5">
                 <svg
                   className={`absolute inset-0 transition-all duration-700 ${isRevenueExpanded ? 'rotate-180 scale-110' : 'rotate-0'}`}
                   fill="none"

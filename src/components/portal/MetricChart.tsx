@@ -175,8 +175,17 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
   const [sortOrder, setSortOrder] = useState<'chronological' | 'peak' | 'low'>('chronological');
   const [isEntriesExpanded, setIsEntriesExpanded] = useState(true);
   const [entryTypeFilter, setEntryTypeFilter] = useState<'all' | 'revenue' | 'expenses'>('all');
+  const [isMobile, setIsMobile] = useState(false);
 
   const config = METRIC_CONFIG[metricType];
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -431,12 +440,12 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 animate-in fade-in duration-200"
       onClick={onClose}
       onWheel={(e) => e.stopPropagation()}
     >
       <div
-        className="bg-[#F8F6F2] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-auto animate-in zoom-in-95 duration-200 modal-scrollbar"
+        className="bg-[#F8F6F2] rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] sm:max-h-[90vh] overflow-auto animate-in zoom-in-95 duration-200 modal-scrollbar"
         style={{
           border: '2px solid #E1ECDB',
           scrollbarGutter: 'stable'
@@ -453,17 +462,17 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
         }}
       >
         {/* Header */}
-        <div className="sticky top-0 text-white px-6 py-5 rounded-t-2xl border-b border-white/20 z-10" style={{ background: config.headerGradient, backgroundColor: config.accentColor }}>
+        <div className="sticky top-0 text-white px-3 sm:px-6 py-3 sm:py-5 rounded-t-xl sm:rounded-t-2xl border-b border-white/20 z-10" style={{ background: config.headerGradient, backgroundColor: config.accentColor }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-lg bg-white/20 flex items-center justify-center">
-                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 sm:w-7 sm:h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={config.iconPath} />
                 </svg>
               </div>
               <div>
-                <h2 className="text-2xl font-bold">{config.label}</h2>
-                <p className="text-white/90 text-sm mt-0.5">
+                <h2 className="text-lg sm:text-2xl font-bold truncate">{config.label}</h2>
+                <p className="text-white/90 text-xs sm:text-sm mt-0.5 hidden sm:block">
                   {viewMode === 'monthly' ? 'Monthly Performance Analysis' : 'Annual Performance Overview'}
                 </p>
               </div>
@@ -481,7 +490,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           {loading && (
             <div className="text-center py-20">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-[#9db896] border-t-transparent"></div>
@@ -507,7 +516,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
           {!loading && !error && chartData.length > 0 && (
             <>
               {/* View Mode Toggle */}
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
                 <div className="flex gap-2">
                   <Button
                     onClick={() => setViewMode('monthly')}
@@ -515,10 +524,10 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                     className={`transition-all cursor-pointer ${viewMode === 'monthly' ? 'text-white' : 'hover:bg-gray-100'}`}
                     style={viewMode === 'monthly' ? { background: config.accentColor } : {}}
                   >
-                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    Monthly View
+                    <span className="hidden sm:inline">Monthly View</span><span className="sm:hidden">Month</span>
                   </Button>
                   <Button
                     onClick={() => setViewMode('annual')}
@@ -526,14 +535,14 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                     className={`transition-all cursor-pointer ${viewMode === 'annual' ? 'text-white' : 'hover:bg-gray-100'}`}
                     style={viewMode === 'annual' ? { background: config.accentColor } : {}}
                   >
-                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
-                    Annual View
+                    <span className="hidden sm:inline">Annual View</span><span className="sm:hidden">Year</span>
                   </Button>
                 </div>
 
-                {viewMode === 'monthly' && (
+                {viewMode === 'monthly' ? (
                   <select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
@@ -571,7 +580,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                       );
                     })}
                   </select>
-                )}
+                ) : null}
               </div>
 
               {/* Featured Metric Card */}
@@ -595,7 +604,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-5xl font-bold mb-2" style={{ color: config.chartColorDark }}>
+                  <div className="text-3xl sm:text-5xl font-bold mb-2" style={{ color: config.chartColorDark }}>
                     {viewMode === 'monthly'
                       ? config.format(selectedValue)
                       : (metricType === 'occupancy_rate' || metricType === 'vacancy_rate')
@@ -630,9 +639,9 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                       <p className="text-gray-600 mt-4 text-sm">Loading daily data...</p>
                     </div>
                   ) : (
-                    <ResponsiveContainer width="100%" height={450}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 250 : 350}>
                       {viewMode === 'monthly' ? (
-                        <LineChart data={dailyChartData} margin={{ top: 20, right: 40, left: 30, bottom: 50 }}>
+                        <LineChart data={dailyChartData} margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 20 } : { top: 20, right: 40, left: 30, bottom: 50 }}>
                           <defs>
                             <linearGradient id={`gradient-monthly-${metricType}`} x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor={config.chartColor} stopOpacity={0.4} />
@@ -660,12 +669,13 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                           <XAxis
                             dataKey="day"
                             stroke={config.chartColorDark}
-                            strokeWidth={2}
-                            style={{ fontSize: 14, fontWeight: 600, fill: '#374151' }}
-                            tick={{ fill: '#374151', fontWeight: 600 }}
-                            axisLine={{ stroke: config.chartColor, strokeWidth: 2 }}
-                            tickLine={{ stroke: config.chartColor, strokeWidth: 1.5 }}
-                            label={{
+                            strokeWidth={isMobile ? 1 : 2}
+                            style={{ fontSize: isMobile ? 10 : 14, fontWeight: 600, fill: '#374151' }}
+                            tick={{ fill: '#374151', fontWeight: 600, fontSize: isMobile ? 10 : 14 }}
+                            axisLine={{ stroke: config.chartColor, strokeWidth: isMobile ? 1 : 2 }}
+                            tickLine={{ stroke: config.chartColor, strokeWidth: isMobile ? 1 : 1.5 }}
+                            interval={isMobile ? 4 : 'preserveStartEnd'}
+                            label={isMobile ? undefined : {
                               value: 'Day of Month',
                               position: 'insideBottom',
                               offset: -15,
@@ -674,12 +684,13 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                           />
                           <YAxis
                             stroke={config.chartColorDark}
-                            strokeWidth={2}
-                            style={{ fontSize: 14, fontWeight: 600, fill: '#374151' }}
-                            tick={{ fill: '#374151', fontWeight: 600 }}
-                            axisLine={{ stroke: config.chartColor, strokeWidth: 2 }}
-                            tickLine={{ stroke: config.chartColor, strokeWidth: 1.5 }}
-                            label={{
+                            strokeWidth={isMobile ? 1 : 2}
+                            style={{ fontSize: isMobile ? 10 : 14, fontWeight: 600, fill: '#374151' }}
+                            tick={{ fill: '#374151', fontWeight: 600, fontSize: isMobile ? 10 : 14 }}
+                            axisLine={{ stroke: config.chartColor, strokeWidth: isMobile ? 1 : 2 }}
+                            tickLine={{ stroke: config.chartColor, strokeWidth: isMobile ? 1 : 1.5 }}
+                            width={isMobile ? 35 : 60}
+                            label={isMobile ? undefined : {
                               value: config.dataKey.includes('cents') ? 'Amount ($)' : 'Value',
                               angle: -90,
                               position: 'insideLeft',
@@ -688,7 +699,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                             tickFormatter={(value) => {
                               if (config.dataKey.includes('cents')) {
                                 const dollars = value / 100;
-                                if (dollars >= 1000) return `$${(dollars / 1000).toFixed(1)}k`;
+                                if (dollars >= 1000) return `$${(dollars / 1000).toFixed(0)}k`;
                                 return `$${dollars.toFixed(0)}`;
                               }
                               if (config.dataKey.includes('rate')) {
@@ -725,9 +736,9 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                             type="monotone"
                             dataKey="value"
                             stroke={config.chartColor}
-                            strokeWidth={4}
+                            strokeWidth={isMobile ? 2 : 4}
                             fill={`url(#gradient-monthly-${metricType})`}
-                            dot={{
+                            dot={isMobile ? false : {
                               fill: '#ffffff',
                               r: 6,
                               strokeWidth: 3,
@@ -735,18 +746,18 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                               filter: 'url(#shadow)'
                             }}
                             activeDot={{
-                              r: 8,
-                              strokeWidth: 4,
+                              r: isMobile ? 5 : 8,
+                              strokeWidth: isMobile ? 2 : 4,
                               stroke: config.chartColorDark,
                               fill: '#ffffff',
-                              filter: 'url(#shadow)'
+                              filter: isMobile ? undefined : 'url(#shadow)'
                             }}
                             animationDuration={1500}
                             animationEasing="ease-in-out"
                           />
                         </LineChart>
                       ) : (
-                        <AreaChart data={chartData} margin={{ top: 20, right: 40, left: 30, bottom: 50 }}>
+                        <AreaChart data={chartData} margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 30 } : { top: 20, right: 40, left: 30, bottom: 50 }}>
                           <defs>
                             <linearGradient id={`gradient-annual-${metricType}`} x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor={config.chartColor} stopOpacity={0.5} />
@@ -774,15 +785,16 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                           <XAxis
                             dataKey="month"
                             stroke={config.chartColorDark}
-                            strokeWidth={2}
-                            style={{ fontSize: 13, fontWeight: 600, fill: '#374151' }}
-                            tick={{ fill: '#374151', fontWeight: 600 }}
-                            axisLine={{ stroke: config.chartColor, strokeWidth: 2 }}
-                            tickLine={{ stroke: config.chartColor, strokeWidth: 1.5 }}
-                            angle={-45}
+                            strokeWidth={isMobile ? 1 : 2}
+                            style={{ fontSize: isMobile ? 9 : 13, fontWeight: 600, fill: '#374151' }}
+                            tick={{ fill: '#374151', fontWeight: 600, fontSize: isMobile ? 9 : 13 }}
+                            axisLine={{ stroke: config.chartColor, strokeWidth: isMobile ? 1 : 2 }}
+                            tickLine={{ stroke: config.chartColor, strokeWidth: isMobile ? 1 : 1.5 }}
+                            angle={isMobile ? -60 : -45}
                             textAnchor="end"
-                            height={80}
-                            label={{
+                            height={isMobile ? 50 : 80}
+                            interval={isMobile ? 1 : 0}
+                            label={isMobile ? undefined : {
                               value: 'Month',
                               position: 'insideBottom',
                               offset: -25,
@@ -791,12 +803,13 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                           />
                           <YAxis
                             stroke={config.chartColorDark}
-                            strokeWidth={2}
-                            style={{ fontSize: 14, fontWeight: 600, fill: '#374151' }}
-                            tick={{ fill: '#374151', fontWeight: 600 }}
-                            axisLine={{ stroke: config.chartColor, strokeWidth: 2 }}
-                            tickLine={{ stroke: config.chartColor, strokeWidth: 1.5 }}
-                            label={{
+                            strokeWidth={isMobile ? 1 : 2}
+                            style={{ fontSize: isMobile ? 10 : 14, fontWeight: 600, fill: '#374151' }}
+                            tick={{ fill: '#374151', fontWeight: 600, fontSize: isMobile ? 10 : 14 }}
+                            axisLine={{ stroke: config.chartColor, strokeWidth: isMobile ? 1 : 2 }}
+                            tickLine={{ stroke: config.chartColor, strokeWidth: isMobile ? 1 : 1.5 }}
+                            width={isMobile ? 35 : 60}
+                            label={isMobile ? undefined : {
                               value: config.dataKey.includes('cents') ? 'Amount ($)' : 'Value',
                               angle: -90,
                               position: 'insideLeft',
@@ -805,7 +818,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                             tickFormatter={(value) => {
                               if (config.dataKey.includes('cents')) {
                                 const dollars = value / 100;
-                                if (dollars >= 1000) return `$${(dollars / 1000).toFixed(1)}k`;
+                                if (dollars >= 1000) return `$${(dollars / 1000).toFixed(0)}k`;
                                 return `$${dollars.toFixed(0)}`;
                               }
                               if (config.dataKey.includes('rate')) {
@@ -835,9 +848,14 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                             type="monotone"
                             dataKey="value"
                             stroke={config.chartColor}
-                            strokeWidth={4}
+                            strokeWidth={isMobile ? 2 : 4}
                             fill={`url(#gradient-annual-${metricType})`}
-                            dot={{
+                            dot={isMobile ? {
+                              fill: '#ffffff',
+                              r: 3,
+                              strokeWidth: 2,
+                              stroke: config.chartColor
+                            } : {
                               fill: '#ffffff',
                               r: 6,
                               strokeWidth: 3,
@@ -845,11 +863,11 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                               filter: 'url(#shadow-annual)'
                             }}
                             activeDot={{
-                              r: 8,
-                              strokeWidth: 4,
+                              r: isMobile ? 5 : 8,
+                              strokeWidth: isMobile ? 2 : 4,
                               stroke: config.chartColorDark,
                               fill: '#ffffff',
-                              filter: 'url(#shadow-annual)'
+                              filter: isMobile ? undefined : 'url(#shadow-annual)'
                             }}
                             animationDuration={1500}
                             animationEasing="ease-in-out"
@@ -1107,7 +1125,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
             )}
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                 <Card className="bg-white shadow-md hover:shadow-lg transition-shadow" style={{ border: '1px solid #E1ECDB' }}>
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-2 mb-3">
@@ -1118,7 +1136,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                       </div>
                       <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Latest</div>
                     </div>
-                    <div className="text-2xl font-bold" style={{ color: config.chartColorDark }}>
+                    <div className="text-lg sm:text-2xl font-bold" style={{ color: config.chartColorDark }}>
                       {config.format(chartData[chartData.length - 1]?.value || 0)}
                     </div>
                     <Badge variant="secondary" className="mt-2 border" style={{ backgroundColor: `${config.accentColor}20`, color: config.chartColorDark, borderColor: `${config.accentColor}40` }}>Most Recent</Badge>
@@ -1135,7 +1153,7 @@ export default function MetricChart({ orgId, metricType, title, onClose }: Metri
                       </div>
                       <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Average</div>
                     </div>
-                    <div className="text-2xl font-bold" style={{ color: config.chartColorDark }}>
+                    <div className="text-lg sm:text-2xl font-bold" style={{ color: config.chartColorDark }}>
                       {config.format(
                         chartData.reduce((sum, d) => sum + d.value, 0) / chartData.length || 0
                       )}
