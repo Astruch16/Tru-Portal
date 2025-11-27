@@ -1064,23 +1064,23 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F8F6F2] via-[#E1ECDB]/30 to-[#9db896]/20 relative">
+    <div className="min-h-screen bg-gradient-to-br from-[#F8F6F2] via-[#E1ECDB]/30 to-[#9db896]/20 relative overflow-x-hidden">
 
       {/* Header */}
       <div className="bg-white border-b border-border shadow-sm relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1 sm:py-2">
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               {/* TruHost Logo */}
               <Image
                 src="/truhost-logo.png"
                 alt="TruHost Logo"
                 width={380}
                 height={106}
-                className="h-20 w-auto object-contain transition-transform hover:scale-105"
+                className="h-14 sm:h-24 md:h-32 w-auto object-contain transition-transform hover:scale-105"
                 priority
               />
-              <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2">
                 <p className="text-sm text-muted-foreground">Admin Portal</p>
                 {/* Pulsing green dot */}
                 <div className="relative flex items-center justify-center">
@@ -1089,30 +1089,30 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 sm:gap-3">
               {/* Portal Button - Switch to member portal view */}
               <Button
                 onClick={() => router.push(`/portal/${orgId}`)}
                 variant="outline"
                 size="sm"
-                className="border-border hover:bg-primary/5 hover:border-primary hover:scale-105 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 cursor-pointer"
+                className="border-border hover:bg-primary/5 hover:border-primary hover:scale-105 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 cursor-pointer text-xs sm:text-sm"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="mr-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="sm:mr-2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
-                Portal
+                <span className="hidden sm:inline">Portal</span>
               </Button>
               {/* Messages Button */}
               <Button
                 onClick={() => router.push(`/admin/${orgId}/messages`)}
                 variant="outline"
                 size="sm"
-                className="border-border hover:bg-primary/5 hover:border-primary transition-all duration-300 cursor-pointer relative"
+                className="border-border hover:bg-primary/5 hover:border-primary transition-all duration-300 cursor-pointer relative text-xs sm:text-sm"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="mr-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="sm:mr-2">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
-                Messages
+                <span className="hidden sm:inline">Messages</span>
                 {unreadMessagesCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
                     {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
@@ -1124,12 +1124,12 @@ export default function AdminPage() {
                 onClick={handleLogout}
                 variant="outline"
                 size="sm"
-                className="border-border hover:border-destructive hover:text-destructive hover:bg-destructive/5 transition-all duration-300 cursor-pointer"
+                className="border-border hover:border-destructive hover:text-destructive hover:bg-destructive/5 transition-all duration-300 cursor-pointer text-xs sm:text-sm"
               >
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mr-2">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="sm:mr-2">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                Logout
+                <span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
           </div>
@@ -1384,12 +1384,12 @@ export default function AdminPage() {
                 >
                   {/* Plan Filter */}
                   {users.length > 0 && (
-                    <div className="mb-4 flex items-center justify-end gap-4 text-xs">
+                    <div className="mb-4 flex flex-wrap items-center justify-end gap-2 sm:gap-4 text-xs">
                       <div className="flex items-center gap-2">
                         <span className="text-muted-foreground">Filter by Plan:</span>
                         <Listbox value={userPlanFilter} onChange={setUserPlanFilter}>
                           <div className="relative">
-                            <Listbox.Button className="relative w-36 cursor-pointer rounded-lg bg-background py-1.5 pl-3 pr-8 text-left text-xs border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                            <Listbox.Button className="relative w-28 sm:w-36 cursor-pointer rounded-lg bg-background py-1.5 pl-3 pr-8 text-left text-xs border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
                               <span className="block truncate">
                                 {userPlanFilter === 'all' ? 'All Plans' : TIER_LABEL[userPlanFilter as Tier]}
                               </span>
@@ -1682,11 +1682,11 @@ export default function AdminPage() {
                 >
                   {/* Filter by Property Type */}
                   {properties.length > 0 && (
-                    <div className="flex items-center justify-end mb-3 gap-2 text-xs">
+                    <div className="flex flex-wrap items-center justify-end mb-3 gap-2 text-xs">
                       <span className="text-muted-foreground">Filter by Type:</span>
                       <Listbox value={propertyTypeFilter} onChange={setPropertyTypeFilter}>
                         <div className="relative">
-                          <Listbox.Button className="relative w-36 cursor-pointer rounded-lg bg-background py-1.5 pl-3 pr-8 text-left text-xs border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                          <Listbox.Button className="relative w-28 sm:w-36 cursor-pointer rounded-lg bg-background py-1.5 pl-3 pr-8 text-left text-xs border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
                             <span className="block truncate">
                               {propertyTypeFilter === 'all' ? 'All Types' : propertyTypeFilter.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                             </span>
@@ -2951,15 +2951,15 @@ export default function AdminPage() {
                     opacity: isAllEntriesExpanded ? 1 : 0,
                   }}
                 >
-                  <div className="flex items-center justify-end mb-3">
+                  <div className="flex flex-wrap items-center justify-end mb-3">
                   {/* Filters */}
-                  <div className="flex items-center gap-4 text-xs">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs">
                     {/* Month Filter */}
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Filter:</span>
                       <Listbox value={ledgerFilterMonth} onChange={setLedgerFilterMonth}>
                         <div className="relative">
-                          <Listbox.Button className="relative cursor-pointer rounded-lg bg-background py-1.5 pl-3 pr-8 text-left border border-input hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all text-xs min-w-[140px]">
+                          <Listbox.Button className="relative cursor-pointer rounded-lg bg-background py-1.5 pl-3 pr-8 text-left border border-input hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all text-xs w-28 sm:w-36">
                             <span className="block truncate">
                               {ledgerFilterMonth === 'all' ? 'All Months' : (() => {
                                 const [year, monthNum] = ledgerFilterMonth.split('-').map(Number);
@@ -3022,7 +3022,7 @@ export default function AdminPage() {
                     <div className="flex items-center gap-2">
                       <Listbox value={ledgerFilterProperty} onChange={setLedgerFilterProperty}>
                         <div className="relative">
-                          <Listbox.Button className="relative cursor-pointer rounded-lg bg-background py-1.5 pl-3 pr-8 text-left border border-input hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all text-xs min-w-[130px]">
+                          <Listbox.Button className="relative cursor-pointer rounded-lg bg-background py-1.5 pl-3 pr-8 text-left border border-input hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all text-xs w-28 sm:w-36">
                             <span className="block truncate">
                               {ledgerFilterProperty === 'all' ? 'All Properties' : properties.find(p => p.id === ledgerFilterProperty)?.name}
                             </span>
@@ -3732,21 +3732,21 @@ export default function AdminPage() {
                     ) : (
                       <div className="grid gap-4">
                         {filteredReceipts.map((receipt: any) => (
-                          <Card key={receipt.id} className="border-border hover:shadow-md transition-shadow">
+                          <Card key={receipt.id} className="border-border hover:shadow-md transition-shadow overflow-hidden">
                             <div className="p-4">
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1 space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-semibold">{receipt.file_name}</span>
+                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                <div className="flex-1 min-w-0 space-y-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-sm font-semibold truncate">{receipt.file_name}</span>
                                     {receipt.mime_type?.includes('pdf') && (
-                                      <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded">PDF</span>
+                                      <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded shrink-0">PDF</span>
                                     )}
                                     {receipt.mime_type?.includes('image') && (
-                                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Image</span>
+                                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded shrink-0">Image</span>
                                     )}
                                   </div>
                                   <div className="text-xs text-muted-foreground space-y-1">
-                                    <div>Property: {properties.find(p => p.id === receipt.property_id)?.name || 'Unknown'}</div>
+                                    <div className="truncate">Property: {properties.find(p => p.id === receipt.property_id)?.name || 'Unknown'}</div>
                                     {receipt.receipt_date && (
                                       <div>Month: <span className="font-medium">{(() => {
                                         // Parse YYYY-MM-DD and create date in local timezone to avoid UTC issues
@@ -3760,23 +3760,23 @@ export default function AdminPage() {
                                       <div>Category: <span className="font-medium text-primary">{receipt.description}</span></div>
                                     )}
                                     {receipt.note && (
-                                      <div>Note: <span className="font-medium text-foreground">{receipt.note}</span></div>
+                                      <div className="break-words">Note: <span className="font-medium text-foreground">{receipt.note}</span></div>
                                     )}
                                     {receipt.amount_cents !== null && (
                                       <div>Amount: ${(receipt.amount_cents / 100).toFixed(2)}</div>
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 shrink-0">
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => window.open(receipt.file_url, '_blank')}
                                   >
-                                    <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg className="w-4 h-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                     </svg>
-                                    Download
+                                    <span className="hidden sm:inline">Download</span>
                                   </Button>
                                   <Button
                                     variant="destructive"
@@ -3976,10 +3976,10 @@ export default function AdminPage() {
                     opacity: isAllInvoicesExpanded ? 1 : 0,
                   }}
                 >
-                  <div className="flex items-center justify-end mb-3">
+                  <div className="flex flex-wrap items-center justify-end mb-3">
                   {/* Group By Toggle & Month Filter */}
                   {invoices.length > 0 && (
-                    <div className="flex items-center gap-3 text-xs">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
                       {/* Group By Toggle */}
                       <div className="flex items-center gap-2">
                         <span className="text-muted-foreground">Group by:</span>
@@ -4011,7 +4011,7 @@ export default function AdminPage() {
                         <span className="text-muted-foreground">Filter:</span>
                         <Listbox value={invoiceFilterMonth} onChange={setInvoiceFilterMonth}>
                           <div className="relative">
-                            <Listbox.Button className="relative cursor-pointer rounded-lg bg-background py-1.5 pl-3 pr-8 text-left border border-input hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all text-xs min-w-[140px]">
+                            <Listbox.Button className="relative cursor-pointer rounded-lg bg-background py-1.5 pl-3 pr-8 text-left border border-input hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all text-xs w-28 sm:w-36">
                               <span className="block truncate">
                                 {invoiceFilterMonth === 'all' ? 'All Months' : (() => {
                                   const [year, monthNum] = invoiceFilterMonth.split('-').map(Number);
@@ -4055,7 +4055,7 @@ export default function AdminPage() {
                       <div className="flex items-center gap-2">
                         <Listbox value={invoiceFilterProperty} onChange={setInvoiceFilterProperty}>
                           <div className="relative">
-                            <Listbox.Button className="relative cursor-pointer rounded-lg bg-background py-1.5 pl-3 pr-8 text-left border border-input hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all text-xs min-w-[130px]">
+                            <Listbox.Button className="relative cursor-pointer rounded-lg bg-background py-1.5 pl-3 pr-8 text-left border border-input hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all text-xs w-28 sm:w-36">
                               <span className="block truncate">
                                 {invoiceFilterProperty === 'all' ? 'All Properties' : properties.find(p => p.id === invoiceFilterProperty)?.name}
                               </span>
@@ -4668,12 +4668,12 @@ export default function AdminPage() {
                   </div>
 
                   {/* Filters and Sort */}
-                  <div className="flex items-center gap-4 mb-4 flex-wrap">
-                    <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center gap-2 sm:gap-4 mb-4 flex-wrap text-xs sm:text-sm">
+                    <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Property:</span>
                       <Listbox value={reviewFilterProperty} onChange={setReviewFilterProperty}>
                         <div className="relative">
-                          <Listbox.Button className="relative w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                          <Listbox.Button className="relative w-28 sm:w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
                             <span className="block truncate text-sm">
                               {reviewFilterProperty === 'all' ? 'All Properties' : properties.find(p => p.id === reviewFilterProperty)?.name || 'All Properties'}
                             </span>
@@ -4722,11 +4722,11 @@ export default function AdminPage() {
                       </Listbox>
                     </div>
 
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Platform:</span>
                       <Listbox value={reviewFilterPlatform} onChange={setReviewFilterPlatform}>
                         <div className="relative">
-                          <Listbox.Button className="relative w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                          <Listbox.Button className="relative w-28 sm:w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
                             <span className="block truncate text-sm">
                               {reviewFilterPlatform === 'all' && 'All Platforms'}
                               {reviewFilterPlatform === 'airbnb' && 'Airbnb'}
@@ -4788,11 +4788,11 @@ export default function AdminPage() {
                       </Listbox>
                     </div>
 
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Sort by:</span>
                       <Listbox value={reviewSortBy} onChange={setReviewSortBy}>
                         <div className="relative">
-                          <Listbox.Button className="relative w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
+                          <Listbox.Button className="relative w-28 sm:w-44 cursor-pointer rounded-lg bg-background py-2 pl-3 pr-10 text-left shadow-md border border-border hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-all">
                             <span className="block truncate text-sm">
                               {reviewSortBy === 'date-desc' && 'Newest First'}
                               {reviewSortBy === 'date-asc' && 'Oldest First'}

@@ -649,7 +649,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
                 alt="TruHost Logo"
                 width={380}
                 height={106}
-                className="h-12 sm:h-16 md:h-20 w-auto object-contain transition-transform hover:scale-105"
+                className="h-14 sm:h-24 md:h-32 w-auto object-contain transition-transform hover:scale-105"
                 priority
               />
               <div className="hidden sm:flex items-center gap-2">

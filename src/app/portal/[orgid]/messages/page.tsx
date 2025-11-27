@@ -402,7 +402,7 @@ export default function MemberMessagesPage({ params }: { params: Promise<{ orgid
                 alt="TruHost Logo"
                 width={380}
                 height={106}
-                className="h-16 w-auto object-contain"
+                className="h-14 sm:h-20 md:h-24 w-auto object-contain"
                 priority
               />
               <div className="flex items-center gap-2">
