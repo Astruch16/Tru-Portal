@@ -48,7 +48,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8F6F2] via-[#E1ECDB]/30 to-[#9db896]/20 p-4 relative">
+    <div className="h-screen overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#F8F6F2] via-[#E1ECDB]/30 to-[#9db896]/20 p-4 relative">
 
       <Card className="w-full max-w-md relative bg-card border-border shadow-xl">
         <CardHeader className="text-center pb-8">
@@ -147,7 +147,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8F6F2] via-[#E1ECDB]/30 to-[#9db896]/20">
+      <div className="h-screen overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#F8F6F2] via-[#E1ECDB]/30 to-[#9db896]/20">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
         </div>

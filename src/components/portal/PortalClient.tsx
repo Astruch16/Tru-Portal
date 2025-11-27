@@ -855,8 +855,8 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
           <Separator className="mt-1 mb-4 bg-border" />
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm animate-slide-in pb-4">
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-1 sm:gap-2 bg-muted/30 rounded-lg p-1 border border-[#E1ECDB]">
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-1 sm:gap-2 bg-muted/30 rounded-lg p-1 border border-[#E1ECDB] flex-shrink-0">
               <Button
                 size="sm"
                 variant="ghost"
@@ -995,7 +995,7 @@ export default function PortalClient({ orgId, month, kpi, invoices, plan: server
             )}
             {plan && (
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Plan:</span>
+                <span className="text-muted-foreground hidden sm:inline">Plan:</span>
                 <Badge className="bg-primary text-primary-foreground font-semibold capitalize hover:bg-primary/90">
                   {plan.tier} ({plan.percent}%)
                 </Badge>
